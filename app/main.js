@@ -16,6 +16,7 @@ const STATUS_VALUES = {
 // TSKs concluídas mais vezes que este limite ficam fora do report de encerradas.
 const MAX_COMPLETIONS_PER_TSK = 2;
 // NE IDs fora (Flag 1) do Genesis, servidos pelo TrocaIP.exe (o Genesis não libera leitura direta).
+// O fluxo completo está no bloco "TrocaIP / Genesis", logo acima de fetchGenesisNeDownCount.
 const GENESIS_NE_DOWN_URL = "http://127.0.0.1:8765/genesis/ne-fora";
 // Folga para o usuário responder ao pedido de acesso à rede local do navegador.
 const GENESIS_TIMEOUT_MS = 15000;
@@ -1153,6 +1154,14 @@ async function copyText(text) {
   if (!copyTextFallback(text)) throw new Error("A cópia não foi autorizada.");
 }
 
+// ===== TrocaIP / Genesis: NE IDs fora (Flag 1) no report =====
+// Fluxo completo da consulta ao Genesis via TrocaIP.exe para o parcial do backlog:
+//   1. GENESIS_NE_DOWN_URL / GENESIS_TIMEOUT_MS (topo do arquivo): endpoint local do TrocaIP.
+//   2. fetchGenesisNeDownCount (abaixo): busca a contagem de NE IDs fora no Genesis.
+//   3. isGenesisAccessBlocked / genesisUnavailableMessage: avisos quando a consulta falha.
+//   4. copyBacklogSummary: junta a contagem ao texto e copia o parcial.
+//   5. buildBacklogSummary: escreve a linha "SITES FORA COM FLAG 1" no report.
+//   6. Fim do arquivo: consulta inicial ao abrir a página (pedido de acesso à rede local).
 // Retorna null se o TrocaIP.exe não estiver rodando ou o Genesis não responder.
 async function fetchGenesisNeDownCount() {
   try {

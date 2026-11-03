@@ -513,7 +513,12 @@ const isSemConclusao = (record) => !isComConclusao(record);
 const isSemConclusaoComPendencia = (record) => isSemConclusao(record) && record.pendente > 0;
 const isSemConclusaoSemPendencia = (record) => isSemConclusao(record) && record.pendente <= 0;
 // Ainda não mexeu em nada: só tem atividades não iniciadas (canceladas não contam).
-const isNaoIniciou = (record) => record.naoIniciado > 0 && record.concluida <= 0 && record.iniciado <= 0 && record.pendente <= 0;
+// Iniciado e pendente valem de qualquer tipo: quem iniciou uma preventiva (ATSK) e tem
+// corretiva não iniciada já começou o dia.
+const isNaoIniciou = (record) => {
+  const all = record.countsByTipo ? record.countsByTipo.all : record;
+  return record.naoIniciado > 0 && record.concluida <= 0 && (all.iniciado || 0) <= 0 && (all.pendente || 0) <= 0;
+};
 
 const SITUACAO_PREDICATES = {
   all: () => true,
