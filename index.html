@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f6f3">
+  <title>Análise Diária de Técnicos TNE</title>
+  <link rel="stylesheet" href="app/theme.css?v=20261024a">
+  <script src="app/theme.js?v=20261024a"></script>
+  <script src="app/auth.js?v=20261030a" data-protegida></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background-color: var(--paper);
+      background-image: radial-gradient(var(--line) 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+    .panel { background: var(--panel); border: 1px solid var(--line); }
+    .drop-zone { transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
+    .drop-zone.is-dragging { background: var(--drop-active); border-color: var(--green); transform: translateY(-2px); }
+    .bar-track { background: var(--line-soft); }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .group-donut { position: relative; display: grid; place-items: center; width: min(100%, 12rem); aspect-ratio: 1; border-radius: 50%; }
+    .group-donut-center { position: absolute; inset: 24%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface); text-align: center; }
+    .situation-card[aria-pressed="true"] { background: var(--drop-hover); box-shadow: inset 0 0 0 1px var(--line-dashed); }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+      .drop-zone.is-dragging { transform: none; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+    <header class="mb-8 flex flex-col gap-5 border-b border-[color:var(--line)] pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--green)]">
+          <span class="inline-block h-2 w-2 rounded-full bg-[color:var(--green-solid)]"></span>
+          Operação · informativo diário
+        </div>
+        <h1 class="text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">Análise Diária de Técnicos TNE</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-[color:var(--muted)]">Acompanhe conclusões, pendências e a distribuição dos técnicos da TNE1 e TNE2 por responsável e gerente a partir da planilha do dia.</p>
+      </div>
+      <div class="flex flex-col gap-2 self-start sm:items-stretch sm:self-auto">
+        <div class="flex items-center gap-2">
+          <div class="flex flex-1 items-center gap-2 rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 text-xs font-medium text-[color:var(--muted)]">
+            <span aria-hidden="true" class="text-[color:var(--green)]">●</span>
+            Processamento local no navegador
+          </div>
+          <button id="theme-toggle" type="button" class="theme-toggle inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] text-[color:var(--ink-3)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]" aria-label="Ativar tema escuro" title="Ativar tema escuro">
+            <svg aria-hidden="true" class="icon-moon h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2A6.5 6.5 0 017.8 3.5a6.5 6.5 0 108.7 8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <svg aria-hidden="true" class="icon-sun h-4 w-4" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v1.8M10 15.7v1.8M2.5 10h1.8M15.7 10h1.8M4.7 4.7l1.3 1.3M14 14l1.3 1.3M4.7 15.3 6 14M14 6l1.3-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button id="logout-button" type="button" class="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] text-[color:var(--ink-3)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]" aria-label="Sair" title="Sair">
+            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M8 3.5H5A1.5 1.5 0 003.5 5v10A1.5 1.5 0 005 16.5h3M12.5 13.5L16 10l-3.5-3.5M16 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <a href="backlog.html" title="Abre o Report Backlog TNE com a planilha já importada aqui" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] bg-[color:var(--surface)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">
+          Report Backlog TNE
+          <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none"><path d="M7 5l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <!-- Importar planilha -->
+      <section aria-labelledby="upload-title" class="panel mb-7 rounded-md p-5 sm:p-6">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 id="upload-title" class="text-lg font-semibold">Importar planilha</h2>
+            <p class="mt-1 text-sm text-[color:var(--muted)]">Selecione a extração do TOA (aba Page 1) ou o report com a Planilha2. A contagem por técnico é montada automaticamente.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="file-input" class="inline-flex cursor-pointer items-center gap-2 rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5M4 12.5v3A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Escolher arquivo
+            </label>
+            <button id="clear-button" type="button" class="hidden items-center gap-2 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M4 5h12M8 5V3.5h4V5m-6.5 0 .7 11h7.6l.7-11M8.5 8v5m3-5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Limpar
+            </button>
+          </div>
+        </div>
+
+        <input id="file-input" class="sr-only" type="file" accept=".xlsx,.xls,.csv">
+        <div id="drop-zone" role="button" tabindex="0" aria-label="Arraste uma planilha para esta área ou pressione Enter para escolher um arquivo" class="drop-zone cursor-pointer rounded-sm border border-dashed border-[color:var(--line-dashed)] bg-[color:var(--drop)] px-5 py-7 text-center hover:border-[color:var(--green)] hover:bg-[color:var(--drop-hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">
+          <div class="mx-auto flex max-w-xl flex-col items-center">
+            <span class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 002 2h10a2 2 0 002-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <p class="text-sm font-semibold text-[color:var(--ink-2)]">Arraste e solte a planilha aqui</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Formatos aceitos: .xlsx, .xls e .csv</p>
+          </div>
+        </div>
+
+        <div id="file-meta" class="mt-3 hidden text-xs text-[color:var(--muted)]"></div>
+        <div id="sheet-picker-wrap" class="mt-4 hidden max-w-sm">
+          <label for="sheet-picker" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Aba de atividades</label>
+          <select id="sheet-picker" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-sm border border-[color:var(--line-2)] bg-[color:var(--drop)] px-4 py-3 text-xs text-[color:var(--ink-4)]">
+          <p class="min-w-0"><span class="font-semibold text-[color:var(--ink-2)]">Cadastro de técnicos:</span> <span id="cadastro-status"></span></p>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="cadastro-input" title="Planilha com Nome do recurso, Tempo de trabalho, Unidade organizacional, Coordenador/Responsável, Regional e Gerente" class="cursor-pointer rounded-sm border border-[color:var(--green)] bg-[color:var(--surface)] px-3 py-1.5 font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[color:var(--green)]">
+              Atualizar cadastro
+              <input id="cadastro-input" class="sr-only" type="file" accept=".xlsx,.xls,.csv">
+            </label>
+            <button id="cadastro-reset-button" type="button" class="hidden rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-1.5 font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Restaurar padrão</button>
+          </div>
+          <p id="cadastro-feedback" role="status" aria-live="polite" class="hidden w-full text-xs"></p>
+        </div>
+        <div id="feedback" role="status" aria-live="polite" class="mt-4 hidden rounded-sm border px-4 py-3 text-sm"></div>
+      </section>
+
+      <!-- Validação -->
+      <section id="validation-section" aria-labelledby="validation-title" class="mb-7 hidden">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="validation-title" class="text-xs font-bold uppercase tracking-[0.1em] text-[color:var(--muted)]">Validação da planilha</h2>
+          <button id="toggle-details-button" type="button" aria-expanded="false" aria-controls="details-panel" class="hidden rounded-sm border border-[color:var(--orange)] px-3 py-1.5 text-xs font-semibold text-[color:var(--orange)] transition hover:bg-[color:var(--orange-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Ver detalhes</button>
+        </div>
+        <div id="validation-chips" class="flex flex-wrap gap-2"></div>
+        <div id="validation-alerts" class="mt-3 space-y-2"></div>
+        <div id="details-panel" class="panel mt-3 hidden rounded-md p-5"></div>
+      </section>
+
+      <!-- Filtros -->
+      <section id="filters-section" aria-labelledby="filters-title" class="panel mb-7 hidden rounded-md p-5 sm:p-6">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="filters-title" class="font-semibold">Filtros</h2>
+            <p id="filters-status" class="mt-1 text-xs text-[color:var(--muted)]"></p>
+          </div>
+          <button id="clear-filters-button" type="button" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Limpar filtros</button>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <div>
+            <label for="filter-tipo" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Tipo de técnico</label>
+            <select id="filter-tipo" data-filter="tipo" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] disabled:cursor-not-allowed disabled:bg-[color:var(--paper)] disabled:text-[color:var(--disabled)]"></select>
+          </div>
+          <div>
+            <label for="filter-gerente" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Gerente</label>
+            <select id="filter-gerente" data-filter="gerente" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+          </div>
+          <div>
+            <label for="filter-responsavel" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Responsável</label>
+            <select id="filter-responsavel" data-filter="responsavel" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+          </div>
+          <div>
+            <label for="filter-regiao" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Região</label>
+            <select id="filter-regiao" data-filter="regiao" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+          </div>
+          <div>
+            <label for="filter-cm" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">CM</label>
+            <select id="filter-cm" data-filter="cm" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+          </div>
+          <div>
+            <label for="filter-situacao" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Situação</label>
+            <select id="filter-situacao" data-filter="situacao" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+          </div>
+          <div>
+            <label for="filter-tecnico" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Técnico</label>
+            <input id="filter-tecnico" type="search" autocomplete="off" placeholder="Nome, código ou CM" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--disabled)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+          </div>
+        </div>
+      </section>
+
+      <!-- Resultados -->
+      <section id="results" class="hidden" aria-labelledby="results-title">
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.1em] text-[color:var(--muted)]">Resumo da análise</p>
+            <h2 id="results-title" class="mt-1 text-xl font-semibold">Situação dos técnicos no dia</h2>
+          </div>
+          <p id="analyzed-sheet" class="text-xs text-[color:var(--muted)]"></p>
+        </div>
+
+        <div class="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <button id="reset-view-card" type="button" title="Limpar todos os filtros e voltar à visualização inicial" class="panel rounded-md border-l-4 border-l-[color:var(--blue)] p-4 text-left transition hover:bg-[color:var(--hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] sm:p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Técnicos</p>
+            <p id="count-tecnicos" class="tabular mt-3 text-3xl font-semibold tracking-tight text-[color:var(--blue)]">0</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Analisados com os filtros · clique para limpar</p>
+          </button>
+          <button type="button" data-situacao="naoIniciaram" aria-pressed="false" aria-controls="tech-section" class="situation-card panel rounded-md border-l-4 border-l-[color:var(--blue)] p-4 text-left transition hover:bg-[color:var(--hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] sm:p-5">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Não iniciaram</span>
+            <span id="count-nao-iniciaram" class="tabular mt-3 block text-3xl font-semibold tracking-tight text-[color:var(--blue)]">0</span>
+            <span id="caption-nao-iniciaram" class="mt-1 block text-xs text-[color:var(--muted)]">Nenhuma atividade iniciada até agora</span>
+          </button>
+          <button type="button" data-situacao="comConclusao" aria-pressed="false" aria-controls="tech-section" class="situation-card panel rounded-md border-l-4 border-l-[color:var(--green)] p-4 text-left transition hover:bg-[color:var(--hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] sm:p-5">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Com conclusão</span>
+            <span id="count-com-conclusao" class="tabular mt-3 block text-3xl font-semibold tracking-tight text-[color:var(--green)]">0</span>
+            <span id="caption-com-conclusao" class="mt-1 block text-xs text-[color:var(--muted)]">0% dos técnicos</span>
+          </button>
+          <button type="button" data-situacao="semConclusao" aria-pressed="false" aria-controls="tech-section" class="situation-card panel rounded-md border-l-4 border-l-[color:var(--orange)] p-4 text-left transition hover:bg-[color:var(--hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] sm:p-5">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Sem conclusão</span>
+            <span id="count-sem-conclusao" class="tabular mt-3 block text-3xl font-semibold tracking-tight text-[color:var(--orange)]">0</span>
+            <span id="caption-sem-conclusao" class="mt-1 block text-xs text-[color:var(--muted)]">Com e sem pendência</span>
+          </button>
+          <button type="button" data-situacao="semConclusaoSemPendencia" aria-pressed="false" aria-controls="tech-section" class="situation-card panel rounded-md border-l-4 border-l-[color:var(--red)] p-4 text-left transition hover:bg-[color:var(--hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] sm:p-5">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Sem conclusão + sem pendência</span>
+            <span id="count-critico" class="tabular mt-3 block text-3xl font-semibold tracking-tight text-[color:var(--red)]">0</span>
+            <span id="caption-critico" class="mt-1 block text-xs text-[color:var(--muted)]">Caso crítico</span>
+          </button>
+          <button type="button" data-situacao="semConclusaoComPendencia" aria-pressed="false" aria-controls="tech-section" class="situation-card panel rounded-md border-l-4 border-l-[color:var(--amber)] p-4 text-left transition hover:bg-[color:var(--hover)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] sm:p-5">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Sem conclusão + com pendência</span>
+            <span id="count-com-pendencia" class="tabular mt-3 block text-3xl font-semibold tracking-tight text-[color:var(--orange)]">0</span>
+            <span id="caption-com-pendencia" class="mt-1 block text-xs text-[color:var(--muted)]">Com pendência</span>
+          </button>
+        </div>
+
+        <div class="mb-7 grid grid-cols-1 gap-5">
+          <!-- Tabela de técnicos -->
+          <section id="tech-section" class="panel min-w-0 scroll-mt-6 overflow-hidden rounded-md" aria-labelledby="tech-table-title">
+            <div class="border-b border-[color:var(--line-2)] px-5 py-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <h3 id="tech-table-title" class="font-semibold">Técnicos sem conclusão</h3>
+                  <p id="tech-table-description" class="mt-1 text-xs text-[color:var(--muted)]"></p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <label for="tech-table-filter" class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                    Situação
+                    <select id="tech-table-filter" class="max-w-[13rem] rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+                      <option value="semConclusao">Todos sem conclusão</option>
+                      <option value="semConclusaoComPendencia">Sem conclusão + com pendência</option>
+                      <option value="semConclusaoSemPendencia">Sem conclusão + sem pendência</option>
+                      <option value="comConclusao">Com conclusão</option>
+                      <option value="naoIniciaram">Não iniciaram</option>
+                      <option value="todos">Todos os técnicos</option>
+                    </select>
+                  </label>
+                  <label for="tech-table-sort" class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                    Ordenar
+                    <select id="tech-table-sort" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+                      <option value="situacao">Por situação</option>
+                      <option value="responsavel">Responsável (A-Z)</option>
+                    </select>
+                  </label>
+                  <button id="export-tech-image-button" type="button" title="Copia uma imagem da tabela para a área de transferência" class="rounded-sm border border-[color:var(--green)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)] disabled:cursor-wait disabled:opacity-60">Exportar report</button>
+                  <button id="export-tech-button" type="button" class="rounded-sm border border-[color:var(--green)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Exportar planilha</button>
+                </div>
+              </div>
+            </div>
+            <div class="max-h-[640px] overflow-auto">
+              <table class="w-full min-w-[960px] text-left text-[13px]">
+                <thead class="sticky top-0 bg-[color:var(--sunken)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
+                  <tr>
+                    <th scope="col" class="px-3 py-3 font-semibold">Técnico</th>
+                    <th scope="col" class="px-3 py-3 font-semibold">Região</th>
+                    <th scope="col" class="px-3 py-3 font-semibold">CM</th>
+                    <th scope="col" class="px-3 py-3 font-semibold">Responsável</th>
+                    <th scope="col" class="px-2 py-3 text-right font-semibold">Cancelada</th>
+                    <th scope="col" class="px-2 py-3 text-right font-semibold">Concluída</th>
+                    <th scope="col" class="px-2 py-3 text-right font-semibold">Iniciado</th>
+                    <th scope="col" class="px-2 py-3 text-right font-semibold">Não iniciado</th>
+                    <th scope="col" class="px-2 py-3 text-right font-semibold">Pendente</th>
+                    <th scope="col" class="px-2 py-3 text-right font-semibold">Total</th>
+                    <th scope="col" class="px-3 py-3 font-semibold">Situação</th>
+                  </tr>
+                </thead>
+                <tbody id="tech-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+                <tfoot id="tech-foot" class="border-t border-[color:var(--line)] bg-[color:var(--sunken)] font-semibold"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <!-- Painéis compactos -->
+          <div class="grid min-w-0 grid-cols-1 items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <section class="panel rounded-md p-5" aria-labelledby="donut-title">
+              <div>
+                <h3 id="donut-title" class="font-semibold">Situação dos técnicos</h3>
+                <p id="donut-subtitle" class="mt-1 text-xs text-[color:var(--muted)]">Percentual sobre o total de técnicos filtrados.</p>
+              </div>
+              <div class="my-5 flex justify-center">
+                <div id="situation-donut" class="group-donut" role="img" aria-label="Situação dos técnicos">
+                  <div class="group-donut-center">
+                    <span id="donut-percent" class="tabular text-2xl font-semibold">0%</span>
+                    <span id="donut-caption" class="mt-0.5 px-2 text-center text-[8.5px] leading-tight text-[color:var(--muted)]">Com conclusão</span>
+                  </div>
+                </div>
+              </div>
+              <div id="donut-legend" class="space-y-2"></div>
+            </section>
+
+            <section class="panel rounded-md p-5" aria-labelledby="region-summary-title">
+              <div class="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 id="region-summary-title" class="font-semibold">Resumo por região</h3>
+                  <p class="mt-1 text-xs text-[color:var(--muted)]">Região da aba de atividades · total de técnicos.</p>
+                </div>
+                <button id="export-region-button" type="button" title="Planilha com uma aba geral e uma aba por estado do CM" class="shrink-0 rounded-sm border border-[color:var(--green)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Exportar</button>
+              </div>
+              <div id="region-summary" class="divide-y divide-[color:var(--line-soft)]"></div>
+            </section>
+
+            <section class="panel rounded-md p-5" aria-labelledby="manager-summary-title">
+              <div class="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 id="manager-summary-title" class="font-semibold">Resumo por gerente</h3>
+                  <p class="mt-1 text-xs text-[color:var(--muted)]">Técnicos sem conclusão + sem pendência.</p>
+                </div>
+                <button id="export-manager-button" type="button" title="Planilha com uma aba geral e uma aba por estado do CM" class="shrink-0 rounded-sm border border-[color:var(--green)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Exportar relatório</button>
+              </div>
+              <div id="manager-summary" class="divide-y divide-[color:var(--line-soft)]"></div>
+            </section>
+          </div>
+        </div>
+
+        <!-- Resumo por responsável -->
+        <section class="panel mb-7 overflow-hidden rounded-md" aria-labelledby="responsible-title">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line-2)] px-5 py-4">
+            <div>
+              <h3 id="responsible-title" class="font-semibold">Resumo por responsável</h3>
+              <p class="mt-1 text-xs text-[color:var(--muted)]">Técnicos de cada responsável por situação.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <label for="responsible-sort" class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                Organizar
+                <select id="responsible-sort" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+                  <option value="critical">Mais críticos</option>
+                  <option value="volume">Maior volume</option>
+                  <option value="az">A-Z</option>
+                </select>
+              </label>
+              <button id="export-responsible-button" type="button" title="Planilha com uma aba geral e uma aba por estado do CM" class="rounded-sm border border-[color:var(--green)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Exportar</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[640px] text-left text-sm">
+              <thead class="bg-[color:var(--sunken)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
+                <tr>
+                  <th scope="col" class="px-5 py-3 font-semibold">Responsável</th>
+                  <th scope="col" class="px-4 py-3 text-right font-semibold">Total técnicos</th>
+                  <th scope="col" class="px-4 py-3 text-right font-semibold">Com conclusão</th>
+                  <th scope="col" class="px-4 py-3 text-right font-semibold">Sem conclusão + com pendência</th>
+                  <th scope="col" class="px-5 py-3 text-right font-semibold">Sem conclusão + sem pendência</th>
+                </tr>
+              </thead>
+              <tbody id="responsible-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Gráfico por responsável -->
+        <section class="panel mb-7 rounded-md p-5 sm:p-6" aria-labelledby="chart-title">
+          <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 id="chart-title" class="font-semibold">Técnicos sem conclusão por responsável</h3>
+              <p class="mt-1 text-xs text-[color:var(--muted)]">Barra proporcional ao responsável com mais técnicos sem conclusão.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <span id="chart-total" class="text-xs font-medium text-[color:var(--muted)]"></span>
+              <label for="chart-sort" class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                Organizar
+                <select id="chart-sort" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+                  <option value="desc">Maior para menor</option>
+                  <option value="az">A-Z</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="mb-4 flex flex-wrap gap-4 text-xs text-[color:var(--ink-4)]">
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[color:var(--amber)]"></span>Sem conclusão + com pendência</span>
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[color:var(--red)]"></span>Sem conclusão + sem pendência</span>
+          </div>
+          <div id="responsible-chart" class="space-y-3"></div>
+        </section>
+
+        <!-- Rodapé de ações -->
+        <div class="flex flex-col gap-3 border-t border-[color:var(--line)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-xs text-[color:var(--muted)]">O arquivo permanece no seu dispositivo; nada é enviado a um servidor.</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="export-by-region-button" type="button" title="Planilha com uma aba geral, uma aba por região (TNE1/TNE2) e uma aba por estado do CM" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M10 3v10m0 0 3.5-3.5M10 13 6.5 9.5M4 15.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Exportar técnicos por região
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Análise Diária de Técnicos <span aria-hidden="true">·</span> leitura e processamento locais</footer>
+  </div>
+
+  <!-- Report dividido em partes (Exportar report com mais de 30 técnicos) -->
+  <dialog id="report-dialog" aria-labelledby="report-dialog-title" class="w-[min(92vw,640px)] rounded-md border border-[color:var(--line)] bg-[color:var(--surface)] p-0 text-[color:var(--ink)] shadow-xl backdrop:bg-black/40">
+    <div class="flex items-start justify-between gap-3 border-b border-[color:var(--line-2)] px-5 py-4">
+      <div>
+        <h3 id="report-dialog-title" class="font-semibold">Report em partes</h3>
+        <p id="report-dialog-desc" class="mt-1 text-xs text-[color:var(--muted)]"></p>
+      </div>
+      <button id="report-dialog-close" type="button" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Fechar</button>
+    </div>
+    <div id="report-parts" class="max-h-[65vh] space-y-3 overflow-auto px-5 py-4"></div>
+    <div class="flex justify-end border-t border-[color:var(--line-2)] px-5 py-3">
+      <button id="report-download-all" type="button" class="rounded-sm border border-[color:var(--green)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">Baixar todas</button>
+    </div>
+  </dialog>
+
+  <script src="app/shared-file.js?v=20261024a"></script>
+  <script src="app/app.js?v=20261031b"></script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f6f3">
+  <title>Report Backlog TNE</title>
+  <link rel="stylesheet" href="app/theme.css?v=20261024a">
+  <script src="app/theme.js?v=20261024a"></script>
+  <script src="app/auth.js?v=20261030a" data-protegida></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="app/shared-file.js?v=20261024a"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background-color: var(--paper);
+      background-image: radial-gradient(var(--line) 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+    .panel { background: var(--panel); border: 1px solid var(--line); }
+    .drop-zone { transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
+    .drop-zone.is-dragging { background: var(--drop-active); border-color: var(--green); transform: translateY(-2px); }
+    .bar-track { background: var(--line-soft); }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .view-card { cursor: pointer; transition: box-shadow 160ms ease, background-color 160ms ease; }
+    .view-card:hover { background: var(--hover); }
+    .view-card:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    .view-card[aria-pressed="true"] { background: var(--surface); box-shadow: 0 0 0 2px var(--green); }
+    .view-card[data-view="pending"][aria-pressed="true"] { box-shadow: 0 0 0 2px var(--orange); }
+    .state-group-button { color: var(--ink-3); transition: background-color 160ms ease, color 160ms ease; }
+    .state-group-button:hover { background: var(--green-soft); }
+    .state-group-button[aria-pressed="true"] { background: var(--green-solid); color: #fff; }
+    .group-donut { position: relative; display: grid; place-items: center; width: min(100%, 12rem); aspect-ratio: 1; border-radius: 50%; }
+    .group-donut-center { position: absolute; inset: 24%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface); text-align: center; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+    <header class="mb-8 flex flex-col gap-5 border-b border-[color:var(--line)] pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--green)]">
+          <span class="inline-block h-2 w-2 rounded-full bg-[color:var(--green)]"></span>
+          Operação · informativo diário
+        </div>
+        <h1 class="text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">Report Backlog TNE</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-[color:var(--muted)]">Acompanhe encerramentos, cancelamentos e distribuição por bucket a partir da planilha do dia.</p>
+      </div>
+      <div class="flex flex-col gap-2 self-start sm:items-stretch sm:self-auto">
+        <div class="flex items-center gap-2">
+          <div class="flex flex-1 items-center gap-2 rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 text-xs font-medium text-[color:var(--muted)]">
+            <span aria-hidden="true" class="text-[color:var(--green)]">●</span>
+            Processamento local no navegador
+          </div>
+          <button id="theme-toggle" type="button" class="theme-toggle inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] text-[color:var(--ink-3)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]" aria-label="Ativar tema escuro" title="Ativar tema escuro">
+            <svg aria-hidden="true" class="icon-moon h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2A6.5 6.5 0 017.8 3.5a6.5 6.5 0 108.7 8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <svg aria-hidden="true" class="icon-sun h-4 w-4" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v1.8M10 15.7v1.8M2.5 10h1.8M15.7 10h1.8M4.7 4.7l1.3 1.3M14 14l1.3 1.3M4.7 15.3 6 14M14 6l1.3-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button id="logout-button" type="button" class="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] text-[color:var(--ink-3)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]" aria-label="Sair" title="Sair">
+            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M8 3.5H5A1.5 1.5 0 003.5 5v10A1.5 1.5 0 005 16.5h3M12.5 13.5L16 10l-3.5-3.5M16 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <a href="index.html" title="Abre a Análise Diária de Técnicos com a mesma planilha" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] bg-[color:var(--surface)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--green)]">
+          <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none"><path d="M13 5l-5 5 5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Análise de técnicos
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <section aria-labelledby="upload-title" class="panel mb-7 rounded-md p-5 sm:p-6">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 id="upload-title" class="text-lg font-semibold">Importar planilha</h2>
+            <p class="mt-1 text-sm text-[color:var(--muted)]">Selecione a extração do TOA (aba Page 1) ou outro arquivo Excel/CSV para analisar os chamados do dia.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="file-input" class="inline-flex cursor-pointer items-center gap-2 rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5M4 12.5v3A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Escolher arquivo
+            </label>
+            <button id="clear-button" type="button" class="hidden items-center gap-2 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M4 5h12M8 5V3.5h4V5m-6.5 0 .7 11h7.6l.7-11M8.5 8v5m3-5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Limpar
+            </button>
+          </div>
+        </div>
+
+        <input id="file-input" class="sr-only" type="file" accept=".xlsx,.xls,.csv">
+        <div id="drop-zone" role="button" tabindex="0" aria-label="Arraste uma planilha para esta área ou pressione Enter para escolher um arquivo" class="drop-zone cursor-pointer rounded-sm border border-dashed border-[color:var(--line-dashed)] bg-[color:var(--drop)] px-5 py-7 text-center hover:border-[color:var(--green)] hover:bg-[color:var(--drop-hover)]">
+          <div class="mx-auto flex max-w-xl flex-col items-center">
+            <span class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 002 2h10a2 2 0 002-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <p class="text-sm font-semibold text-[color:var(--ink-2)]">Arraste e solte a planilha aqui</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Formatos aceitos: .xlsx, .xls e .csv</p>
+          </div>
+        </div>
+
+        <div id="file-meta" class="mt-3 hidden text-xs text-[color:var(--muted)]"></div>
+        <div id="sheet-picker-wrap" class="mt-4 hidden max-w-sm">
+          <label for="sheet-picker" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Aba para análise</label>
+          <select id="sheet-picker" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+        </div>
+        <div id="feedback" role="status" aria-live="polite" class="mt-4 hidden rounded-sm border px-4 py-3 text-sm"></div>
+      </section>
+
+      <section id="results" class="hidden" aria-live="polite">
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.1em] text-[color:var(--muted)]">Resumo da análise</p>
+            <h2 class="mt-1 text-xl font-semibold">Chamados de Planta Interna</h2>
+          </div>
+          <p id="analyzed-sheet" class="text-xs text-[color:var(--muted)]"></p>
+        </div>
+
+        <div class="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <article class="panel rounded-md border-l-4 border-l-[color:var(--blue)] p-4 sm:p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Total de TSKs</p>
+            <p id="total-count" class="tabular mt-3 text-3xl font-semibold tracking-tight">0</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Planta Interna · Manutenção Corretiva</p>
+          </article>
+          <button type="button" data-view="completed" aria-pressed="true" class="view-card panel rounded-md border-l-4 border-l-[color:var(--green)] p-4 text-left sm:p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Encerradas</p>
+            <p id="closed-count" class="tabular mt-3 text-3xl font-semibold tracking-tight text-[color:var(--green)]">0</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Clique para ver as TSKs concluídas</p>
+          </button>
+          <article class="panel rounded-md border-l-4 border-l-[color:var(--orange)] p-4 sm:p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Canceladas</p>
+            <p id="cancelled-count" class="tabular mt-3 text-3xl font-semibold tracking-tight text-[color:var(--orange)]">0</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Status cancelada</p>
+          </article>
+          <button type="button" data-view="pending" aria-pressed="false" class="view-card panel rounded-md border-l-4 border-l-[color:var(--orange)] p-4 text-left sm:p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Pendenciamentos</p>
+            <p id="pending-count" class="tabular mt-3 text-3xl font-semibold tracking-tight text-[color:var(--orange)]">0</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Clique para ver as TSKs pendentes</p>
+          </button>
+        </div>
+
+        <div class="mb-7 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.8fr)]">
+          <section class="panel overflow-hidden rounded-md" aria-labelledby="technician-closures-title">
+            <div class="border-b border-[color:var(--line-2)] px-5 py-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 id="technician-closures-title" class="font-semibold">Encerradas por bucket</h3>
+                  <p id="technician-closures-description" class="mt-1 text-xs text-[color:var(--muted)]">Distribuição das TSKs concluídas, do maior para o menor volume.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                <label id="technician-sort-wrap" for="technician-sort" class="hidden items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                  Organizar técnicos
+                  <select id="technician-sort" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+                    <option value="most">Mais encerradas</option>
+                    <option value="least">Menos encerradas</option>
+                    <option value="cm">Por CM (ordem das regiões)</option>
+                  </select>
+                </label>
+                <button id="technician-groups-toggle" type="button" aria-pressed="false" class="rounded-sm border border-[color:var(--green)] px-3 py-2 text-xs font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">Filtrar fila técnica</button>
+                </div>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[600px] text-left text-sm">
+                <thead class="bg-[color:var(--sunken)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
+                  <tr><th scope="col" class="px-5 py-3 font-semibold">Bucket</th><th scope="col" class="px-5 py-3 font-semibold">Grupo</th><th scope="col" class="px-5 py-3 text-right font-semibold">Quantidade</th></tr>
+                </thead>
+                <tbody id="technician-closure-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+                <tfoot id="technician-closure-foot" class="border-t border-[color:var(--line)] bg-[color:var(--sunken)] font-semibold"></tfoot>
+              </table>
+            </div>
+            <div id="technician-cm-panel" class="hidden border-t border-[color:var(--line-2)]">
+              <div class="px-5 py-4">
+                <h4 id="technician-cm-title" class="font-semibold">Encerradas por CM · Fila de técnicos</h4>
+                <p id="technician-cm-description" class="mt-1 text-xs text-[color:var(--muted)]">CM identificados na coluna AK, agrupados por estado e ordenados por encerramentos.</p>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[320px] text-left text-sm">
+                  <thead class="bg-[color:var(--sunken)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
+                    <tr><th scope="col" class="px-5 py-3 font-semibold">TNE / Estado / CM</th><th id="technician-cm-count-header" scope="col" class="px-5 py-3 text-right font-semibold">Encerradas</th></tr>
+                  </thead>
+                  <tbody id="technician-cm-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <div class="space-y-5">
+            <section class="panel overflow-hidden rounded-md" aria-labelledby="state-status-title">
+              <div class="px-5 pb-3 pt-5">
+                <h3 id="state-status-title" class="font-semibold">Encerradas, canceladas e pendenciamentos por estado</h3>
+                <p id="state-status-description" class="mt-1 text-xs text-[color:var(--muted)]">Todas as TSKs do tipo selecionado, agrupadas pelo estado do CM (coluna AK).</p>
+                <div role="group" aria-label="Grupo das TSKs" class="mt-3 inline-flex rounded-sm border border-[color:var(--line-strong)] p-0.5 text-xs font-semibold">
+                  <button type="button" data-state-group="all" aria-pressed="true" class="state-group-button rounded-sm px-3 py-1.5">Todas</button>
+                  <button type="button" data-state-group="technician" aria-pressed="false" class="state-group-button rounded-sm px-3 py-1.5">Fila técnica</button>
+                  <button type="button" data-state-group="commandCenter" aria-pressed="false" class="state-group-button rounded-sm px-3 py-1.5">Centralizado</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[300px] text-left text-sm">
+                  <thead class="bg-[color:var(--sunken)] text-[11px] uppercase tracking-wide text-[color:var(--muted)]">
+                    <tr><th scope="col" class="px-5 py-2.5 font-semibold">Estado</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Encerr.</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Canc.</th><th scope="col" class="px-5 py-2.5 text-right font-semibold">Pend.</th></tr>
+                  </thead>
+                  <tbody id="state-status-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+                  <tfoot id="state-status-foot" class="border-t border-[color:var(--line)] bg-[color:var(--sunken)] font-semibold"></tfoot>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel rounded-md p-5" aria-labelledby="status-title">
+              <div class="mb-3">
+                <h3 id="status-title" class="font-semibold">Contagem por status</h3>
+                <p class="mt-1 text-xs text-[color:var(--muted)]">Somente TSKs do tipo selecionado.</p>
+              </div>
+              <div id="status-rows" class="divide-y divide-[color:var(--line-soft)]"></div>
+            </section>
+
+            <section class="panel rounded-md p-5" aria-labelledby="group-share-title">
+              <div>
+                <h3 id="group-share-title" class="font-semibold">Encerradas por grupo</h3>
+                <p id="group-share-description" class="mt-1 text-xs text-[color:var(--muted)]">Percentual no total de TSKs concluídas.</p>
+              </div>
+              <div class="my-5 flex justify-center">
+                <div id="group-donut" class="group-donut" role="img" aria-label="Percentual de encerradas por grupo">
+                  <div class="group-donut-center">
+                    <span id="command-center-percent" class="tabular text-2xl font-semibold text-[color:var(--ink)]">0%</span>
+                    <span id="group-donut-center-label" class="mt-0.5 text-[10px] leading-tight text-[color:var(--muted)]">Centralizado</span>
+                  </div>
+                </div>
+              </div>
+              <div id="group-donut-legend" class="space-y-2"></div>
+            </section>
+
+            <article class="panel rounded-md p-5" aria-labelledby="tne-one-comparison-title">
+              <div>
+                <h3 id="tne-one-comparison-title" class="font-semibold">TNE 1 x Centralizado</h3>
+                <p id="tne-one-comparison-description" class="mt-1 text-xs text-[color:var(--muted)]">Compara técnicos e Centralizado vinculados a Alagoas, Bahia, Piauí e Sergipe pela coluna AK.</p>
+              </div>
+              <div class="my-5 flex justify-center">
+                <div id="tne-one-comparison-donut" class="group-donut" role="img" aria-label="Comparação de encerramentos entre TNE 1 e Centralizado">
+                  <div class="group-donut-center">
+                    <span id="tne-one-comparison-percent" class="tabular text-2xl font-semibold text-[color:var(--ink)]">0%</span>
+                    <span id="tne-one-comparison-center-label" class="mt-0.5 text-[10px] leading-tight text-[color:var(--muted)]">Centralizado</span>
+                  </div>
+                </div>
+              </div>
+              <div id="tne-one-comparison-legend" class="space-y-2"></div>
+            </article>
+
+            <article class="panel rounded-md p-5" aria-labelledby="tne-two-comparison-title">
+              <div>
+                <h3 id="tne-two-comparison-title" class="font-semibold">TNE 2 x Centralizado</h3>
+                <p id="tne-two-comparison-description" class="mt-1 text-xs text-[color:var(--muted)]">Compara técnicos e Centralizado vinculados ao Ceará, Paraíba, Pernambuco e Rio Grande do Norte pela coluna AK.</p>
+              </div>
+              <div class="my-5 flex justify-center">
+                <div id="tne-two-comparison-donut" class="group-donut" role="img" aria-label="Comparação de encerramentos entre TNE 2 e Centralizado">
+                  <div class="group-donut-center">
+                    <span id="tne-two-comparison-percent" class="tabular text-2xl font-semibold text-[color:var(--ink)]">0%</span>
+                    <span id="tne-two-comparison-center-label" class="mt-0.5 text-[10px] leading-tight text-[color:var(--muted)]">Centralizado</span>
+                  </div>
+                </div>
+              </div>
+              <div id="tne-two-comparison-legend" class="space-y-2"></div>
+            </article>
+
+            <article class="panel rounded-md p-5" aria-labelledby="tne-total-comparison-title">
+              <div>
+                <h3 id="tne-total-comparison-title" class="font-semibold">Encerradas: TNE 1 x TNE 2</h3>
+                <p id="tne-total-comparison-description" class="mt-1 text-xs text-[color:var(--muted)]">Percentual do total de encerramentos atribuído a cada TNE, incluindo técnicos e Centralizado.</p>
+              </div>
+              <div class="my-5 flex justify-center">
+                <div id="tne-total-comparison-donut" class="group-donut" role="img" aria-label="Comparação do percentual de encerramentos entre TNE 1 e TNE 2">
+                  <div class="group-donut-center">
+                    <span id="tne-total-comparison-percent" class="tabular text-2xl font-semibold text-[color:var(--ink)]">0%</span>
+                    <span id="tne-total-comparison-center-label" class="mt-0.5 text-[10px] leading-tight text-[color:var(--muted)]">TNE 1</span>
+                  </div>
+                </div>
+              </div>
+              <div id="tne-total-comparison-legend" class="space-y-2"></div>
+            </article>
+
+            <section class="panel rounded-md p-5" aria-labelledby="priority-title">
+              <div class="mb-3">
+                <h3 id="priority-title" class="font-semibold">Encerradas por prioridade</h3>
+                <p id="priority-description" class="mt-1 text-xs text-[color:var(--muted)]">Encerradas por prioridade.</p>
+              </div>
+              <div id="priority-rows" class="divide-y divide-[color:var(--line-soft)]">
+                <div class="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span class="text-[color:var(--ink-4)]">P1</span>
+                  <span id="priority-p1" class="tabular font-semibold text-[color:var(--ink)]">0</span>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span class="text-[color:var(--ink-4)]">P2</span>
+                  <span id="priority-p2" class="tabular font-semibold text-[color:var(--ink)]">0</span>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span class="text-[color:var(--ink-4)]">P3</span>
+                  <span id="priority-p3" class="tabular font-semibold text-[color:var(--ink)]">0</span>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span class="text-[color:var(--ink-4)]">P4</span>
+                  <span id="priority-p4" class="tabular font-semibold text-[color:var(--ink)]">0</span>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span class="text-[color:var(--ink-4)]">P5</span>
+                  <span id="priority-p5" class="tabular font-semibold text-[color:var(--ink)]">0</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <section class="panel mb-7 rounded-md p-5 sm:p-6" aria-labelledby="chart-title">
+          <div class="mb-5 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 id="chart-title" class="font-semibold">Volume encerrado por bucket</h3>
+              <p id="chart-description" class="mt-1 text-xs text-[color:var(--muted)]">Cada barra representa a participação no total de encerradas.</p>
+            </div>
+            <span id="chart-total" class="text-xs font-medium text-[color:var(--muted)]"></span>
+          </div>
+          <div id="bucket-chart" class="space-y-3"></div>
+        </section>
+
+        <div class="flex flex-col gap-2 border-t border-[color:var(--line)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-xs text-[color:var(--muted)]">O arquivo permanece no seu dispositivo; nada é enviado a um servidor.</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="entrants-input" class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+              Entrantes
+              <input id="entrants-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="w-20 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+            </label>
+            <label for="backlog-input" class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+              Backlog
+              <input id="backlog-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="w-20 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+            </label>
+            <button id="copy-summary-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><rect x="7" y="6" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 6V4.5A1.5 1.5 0 0011.5 3h-7A1.5 1.5 0 003 4.5v9A1.5 1.5 0 004.5 15H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Copiar parcial
+            </button>
+            <button id="copy-chart-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">
+              Copiar gráfico
+            </button>
+            <button id="export-technicians-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">
+              Exportar técnicos por região
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Report Backlog <span aria-hidden="true">·</span> leitura e processamento locais</footer>
+  </div>
+
+  <script src="app/main.js?v=20261102a"></script>
+</body>
+</html>

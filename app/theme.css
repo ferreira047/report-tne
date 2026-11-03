@@ -1,0 +1,104 @@
+/* Paleta compartilhada pelas páginas. O tema escuro é ligado por data-theme="dark" no <html>;
+   data-theme="light" num elemento força o claro só nele (usado nas imagens exportadas). */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --ink: #17231f;
+  --ink-2: #25352d;
+  --ink-3: #34443c;
+  --ink-4: #4f5e56;
+  --muted: #65736d;
+  --faint: #829087;
+  --disabled: #94a199;
+  --line: #dce4de;
+  --line-2: #e2e8e3;
+  --line-soft: #edf1ed;
+  --line-strong: #cbd5ce;
+  --line-dashed: #aebdb3;
+  --paper: #f4f6f3;
+  --surface: #ffffff;
+  --panel: rgba(255, 255, 255, 0.94);
+  --sunken: #f7f9f7;
+  --hover: #f8faf8;
+  --drop: #f8faf8;
+  --drop-hover: #f1f7f2;
+  --drop-active: #e8f4ec;
+  --track: #e5ebe6;
+  --track-strong: #c9d3cc;
+  --tne-row: #edf3ef;
+  --green: #176b50;
+  --green-hover: #10583f;
+  --green-solid: #176b50;
+  --green-solid-hover: #10583f;
+  --green-soft: #e4f2e9;
+  --green-line: #cfe3d6;
+  --ring: rgba(23, 107, 80, 0.2);
+  --orange: #b95f2d;
+  --orange-soft: #faeee5;
+  --warn-line: #f1d6bf;
+  --warn-ink: #8a4a22;
+  --blue: #356987;
+  --blue-soft: #e9f1f5;
+  --red: #8f2d1f;
+  --red-soft: #fbeae6;
+  --amber: #e58b16;
+  --error-line: #edc5b5;
+  --error-bg: #fff5ef;
+  --error-ink: #873e20;
+  --ok-line: #d9e5ce;
+  --ok-bg: #f2f7ed;
+  --ok-ink: #435c2c;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e6ede9;
+  --ink-2: #d5dfd9;
+  --ink-3: #bfcbc4;
+  --ink-4: #a3b1aa;
+  --muted: #8d9b94;
+  --faint: #6c7a73;
+  --disabled: #5f6d66;
+  --line: #2a3530;
+  --line-2: #27322d;
+  --line-soft: #222c27;
+  --line-strong: #3a4740;
+  --line-dashed: #4a5952;
+  --paper: #0f1513;
+  --surface: #151c19;
+  --panel: rgba(21, 28, 25, 0.94);
+  --sunken: #19211d;
+  --hover: #1b2420;
+  --drop: #161d1a;
+  --drop-hover: #1a2620;
+  --drop-active: #1c2c24;
+  --track: #26302b;
+  --track-strong: #3a4740;
+  --tne-row: #1f2a25;
+  --green: #4cc095;
+  --green-hover: #6fd0ab;
+  --green-solid: #1c7d5c;
+  --green-solid-hover: #22936c;
+  --green-soft: #173327;
+  --green-line: #24493a;
+  --ring: rgba(76, 192, 149, 0.3);
+  --orange: #eb9763;
+  --orange-soft: #33221a;
+  --warn-line: #5a3a24;
+  --warn-ink: #f0b98f;
+  --blue: #6ea8c9;
+  --blue-soft: #1a2833;
+  --red: #e8806e;
+  --red-soft: #2e1a16;
+  --amber: #f0a33f;
+  --error-line: #5a3324;
+  --error-bg: #2a1a13;
+  --error-ink: #f0b394;
+  --ok-line: #34452a;
+  --ok-bg: #1a2216;
+  --ok-ink: #b9d49c;
+}
+
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
