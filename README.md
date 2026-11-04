@@ -73,7 +73,7 @@ O endereço do Genesis e a porta ficam no topo de `genesis_ne_fora.py`, no proje
 
 Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de upload, **ONLINE** e **NÃO AGENDADAS** (extrações do TOA, com as mesmas colunas do backlog); dá para anexar só um deles.
 
-- O campo **ONLINE** usa a mesma planilha compartilhada das outras páginas (`app/shared-file.js`): o que foi importado no backlog ou na análise de técnicos já abre ali, e o que é importado ali abre nas outras. A **NÃO AGENDADAS** não é compartilhada.
+- O campo **ONLINE** usa a mesma planilha compartilhada das outras páginas (`app/shared-file.js`): o que foi importado no backlog ou na análise de técnicos já abre ali, e o que é importado ali abre nas outras. A **NÃO AGENDADAS** não vai para as outras páginas, mas também fica guardada na sessão da aba: as duas continuam carregadas ao apertar F5, até usar **Limpar** ou fechar a aba.
 - Só entram as linhas de `Planta Interna - Manutenção Corretiva` (coluna D) com `Repetido` na coluna **Critério** (GD).
 - Cada TSK conta uma vez por planilha. A mesma TSK nas duas aparece como **Nas duas** e vem primeiro na tabela.
 - **Resumo por estado**: Online, Não agendadas, Nas duas e Total por estado do CM (coluna AK; sem CM reconhecido, pela UF), com filtro Todas, Fila técnica ou Centralizado. Os 8 estados da TNE aparecem sempre; **Outros** só quando há TSK.

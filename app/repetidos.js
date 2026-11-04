@@ -15,12 +15,12 @@ const COLUMNS = {
 const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
 const REPEATED_CRITERION = "Repetido";
 
+// storageKey: onde a planilha fica guardada na sessão (shared-file.js) para voltar após o F5.
+// A ONLINE usa a chave compartilhada com o Backlog e a Análise de técnicos; a NÃO AGENDADAS, uma só desta página.
 const SOURCES = {
-  online: { label: "Online" },
-  unscheduled: { label: "Não agendadas" }
+  online: { label: "Online", storageKey: SHARED_FILE_KEY },
+  unscheduled: { label: "Não agendadas", storageKey: "reportFilaTecTNE.naoAgendadas" }
 };
-// Campo que usa a planilha compartilhada entre as páginas (shared-file.js).
-const SHARED_SOURCE = "online";
 
 // Estado pela sigla do CM (TNE-AL-…); sem CM reconhecido, pela coluna UF. Ordem: TNE 1, depois TNE 2.
 const STATES = {
@@ -92,7 +92,7 @@ function isSupportedFile(file) {
   return /\.(xlsx|xls|csv)$/i.test(file.name);
 }
 
-// fromShared: planilha importada no Backlog ou na Análise de técnicos (mesma aba do navegador).
+// fromShared: planilha guardada na sessão (importada antes nesta ou em outra página).
 async function loadFile(slot, file, fromShared = false) {
   clearSlot(slot, false);
   if (!file) return render();
@@ -109,9 +109,9 @@ async function loadFile(slot, file, fromShared = false) {
     slot.workbook = null;
     return render(`${label}: não foi possível ler o arquivo. Confirme se ele é uma planilha válida. ${error.message || ""}`.trim());
   }
-  // Só a ONLINE é a extração do dia compartilhada com as outras páginas.
-  if (slot.key === SHARED_SOURCE && !fromShared) saveSharedFile(file);
-  slot.meta.textContent = `Arquivo: ${file.name}${fromShared ? " · mesma planilha do Report Backlog" : ""}`;
+  if (!fromShared) saveSharedFile(file, SOURCES[slot.key].storageKey);
+  const sharedNote = fromShared && SOURCES[slot.key].storageKey === SHARED_FILE_KEY ? " · mesma planilha do Report Backlog" : "";
+  slot.meta.textContent = `Arquivo: ${file.name}${sharedNote}`;
   slot.meta.classList.remove("hidden");
   slot.zone.dataset.loaded = "true";
   if (slot.workbook.SheetNames.length > 1) {
@@ -400,8 +400,10 @@ for (const button of document.querySelectorAll(".filter-button")) {
 }
 document.getElementById("export-button").addEventListener("click", exportRepeated);
 clearButton.addEventListener("click", () => {
-  for (const slot of Object.values(slots)) clearSlot(slot);
-  clearSharedFile();
+  for (const slot of Object.values(slots)) {
+    clearSlot(slot);
+    clearSharedFile(SOURCES[slot.key].storageKey);
+  }
   currentFilter = "all";
   currentStateGroup = "all";
   render();
@@ -413,6 +415,8 @@ for (const button of document.querySelectorAll(".state-group-button")) {
   });
 }
 
-// Planilha importada no Report Backlog ou na Análise diária de técnicos (mesma aba do navegador).
-const sharedFile = loadSharedFile();
-if (sharedFile) loadFile(slots[SHARED_SOURCE], sharedFile, true);
+// Planilhas guardadas na sessão: a ONLINE pode vir do Report Backlog ou da Análise de técnicos.
+for (const slot of Object.values(slots)) {
+  const storedFile = loadSharedFile(SOURCES[slot.key].storageKey);
+  if (storedFile) loadFile(slot, storedFile, true);
+}
