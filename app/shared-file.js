@@ -1,7 +1,8 @@
 'use strict';
 
-// Compartilha a planilha importada entre a Análise diária de técnicos (index.html) e o
-// Report Backlog (backlog.html) na mesma aba do navegador, via sessionStorage: quem
+// Compartilha a planilha importada entre a Análise diária de técnicos (index.html), o
+// Report Backlog (backlog.html) e o campo ONLINE dos Chamados Repetidos (repetidos.html)
+// na mesma aba do navegador, via sessionStorage: quem
 // importa grava, quem abre em seguida carrega. Nada sai do navegador.
 const SHARED_FILE_KEY = 'reportFilaTecTNE.planilha';
 

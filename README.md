@@ -69,6 +69,16 @@ O endereço do Genesis e a porta ficam no topo de `genesis_ne_fora.py`, no proje
 - **Exportações**: planilha de técnicos, relatório por gerente (`relatorio-gerente-TNE-AAAA-MM-DD.xlsx`: técnicos sem conclusão + sem pendência numa aba geral e numa aba por estado do CM), por responsável (`tecnicos-por-responsavel-TNE-AAAA-MM-DD.xlsx`: aba geral e uma aba por estado do CM), **Exportar** do Resumo por região (`tecnicos-por-regiao-TNE-AAAA-MM-DD.xlsx`, no mesmo formato do backlog: aba "Tec por região" e uma aba por estado do CM, com CM, nome do técnico e TSKs encerradas), técnicos por região (aba geral com região e estado, uma aba por TNE1/TNE2 e uma aba por estado do CM) e **Exportar report** (imagem da tabela, dividida em partes acima de 30 técnicos).
 - Também aceita uma aba já consolidada (`Planilha2`) com as colunas Técnicos, Concluída e Pendente.
 
+## Chamados Repetidos (`repetidos.html`)
+
+Aberta pelo botão **Chamados repetidos** no cabeçalho do backlog. Tem dois campos de upload, **ONLINE** e **NÃO AGENDADAS** (extrações do TOA, com as mesmas colunas do backlog); dá para anexar só um deles.
+
+- O campo **ONLINE** usa a mesma planilha compartilhada das outras páginas (`app/shared-file.js`): o que foi importado no backlog ou na análise de técnicos já abre ali, e o que é importado ali abre nas outras. A **NÃO AGENDADAS** não é compartilhada.
+- Só entram as linhas de `Planta Interna - Manutenção Corretiva` (coluna D) com `Repetido` na coluna **Critério** (GD).
+- Cada TSK conta uma vez por planilha. A mesma TSK nas duas aparece como **Nas duas** e vem primeiro na tabela.
+- A tabela mostra TSK, planilha, provedor, estado, NE ID, CM, UF, prioridade (GI) e fim do SLA, com filtro por planilha e **Exportar Excel** (`chamados-repetidos-TNE-AAAA-MM-DD.xlsx`, com o filtro atual).
+- Colunas, tipo e valor do critério ficam nas constantes `COLUMNS`, `TARGET_TYPE` e `REPEATED_CRITERION` no início de `app/repetidos.js`.
+
 ## Tema claro e escuro
 
 As páginas abrem no tema claro. O botão de lua/sol no cabeçalho alterna para o escuro, e a escolha fica salva no navegador e vale para as duas páginas (`app/theme.css` e `app/theme.js`).
@@ -101,14 +111,16 @@ Se o layout da planilha mudar, ajuste as constantes no início de `app/main.js` 
 ```
 login.html           Tela de login
 backlog.html         Report Backlog TNE
+repetidos.html       Chamados Repetidos TNE (planilhas ONLINE e NÃO AGENDADAS)
 index.html           Análise Diária de Técnicos TNE
 app/auth.js          Login, sessão e abertura do cadastro criptografado
 app/cadastro.enc.js  Cadastro padrão dos técnicos TNE1/TNE2, criptografado (gerado pelo script)
 app/main.js          Backlog: leitura da planilha, cálculos, gráficos, cópia da parcial e exportação
+app/repetidos.js     Chamados repetidos: leitura das duas planilhas, filtro pela coluna Critério e exportação
 app/app.js           Análise de técnicos: extração do TOA, situações, filtros e exportações
 app/theme.css        Tokens de cor dos temas claro e escuro (compartilhados)
 app/theme.js         Alternância e preferência de tema (compartilhada)
-app/shared-file.js   Compartilha a planilha importada entre as duas páginas na sessão do navegador
+app/shared-file.js   Compartilha a planilha importada entre as páginas na sessão do navegador
 ferramentas/criptografar_cadastro.py  Gera o app/cadastro.enc.js
 privado/cadastro.js  Cadastro sem criptografia (NÃO publicar)
 ```
