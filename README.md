@@ -2,7 +2,7 @@
 
 Painel para acompanhar o backlog diário de chamados de **Planta Interna – Manutenção Corretiva** da TNE. Você importa a planilha do dia e o painel mostra encerramentos, cancelamentos e pendenciamentos por bucket, grupo, estado e prioridade.
 
-O projeto também tem a **Análise Diária de Técnicos** (`index.html`), que monta a situação de cada técnico da TNE1 e TNE2 a partir da extração do TOA. As duas páginas usam a mesma planilha: o que é importado numa já abre na outra (botões **Report Backlog TNE** e **Análise de técnicos** no cabeçalho).
+O projeto também tem a **Análise Diária de Técnicos** (`index.html`), que monta a situação de cada técnico da TNE1 e TNE2 a partir da extração do TOA. As páginas usam a mesma planilha: o que é importado numa já abre na outra. No cabeçalho, os botões **Análise de técnicos**, **Report Backlog** e **Chamados repetidos** ficam lado a lado para escolher a tela; a que está aberta fica destacada.
 
 Tudo roda no navegador: a planilha não é enviada a nenhum servidor.
 
@@ -71,7 +71,7 @@ O endereço do Genesis e a porta ficam no topo de `genesis_ne_fora.py`, no proje
 
 ## Chamados Repetidos (`repetidos.html`)
 
-Aberta pelo botão **Chamados repetidos** no cabeçalho do backlog. Tem dois campos de upload, **ONLINE** e **NÃO AGENDADAS** (extrações do TOA, com as mesmas colunas do backlog); dá para anexar só um deles.
+Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de upload, **ONLINE** e **NÃO AGENDADAS** (extrações do TOA, com as mesmas colunas do backlog); dá para anexar só um deles.
 
 - O campo **ONLINE** usa a mesma planilha compartilhada das outras páginas (`app/shared-file.js`): o que foi importado no backlog ou na análise de técnicos já abre ali, e o que é importado ali abre nas outras. A **NÃO AGENDADAS** não é compartilhada.
 - Só entram as linhas de `Planta Interna - Manutenção Corretiva` (coluna D) com `Repetido` na coluna **Critério** (GD).

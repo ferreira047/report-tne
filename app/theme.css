@@ -102,3 +102,23 @@
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+/* Navegação entre as páginas no cabeçalho; a página aberta fica destacada. */
+.page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--green);
+  border-radius: 0.125rem;
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  color: var(--green);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  text-align: center;
+  transition: background-color 160ms ease;
+}
+.page-link:hover { background: var(--green-soft); }
+.page-link:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.page-link[aria-current="page"] { background: var(--green-solid); border-color: var(--green-solid); color: #fff; cursor: default; }
