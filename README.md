@@ -76,7 +76,7 @@ Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de uplo
 - O campo **ONLINE** usa a mesma planilha compartilhada das outras páginas (`app/shared-file.js`): o que foi importado no backlog ou na análise de técnicos já abre ali, e o que é importado ali abre nas outras. A **NÃO AGENDADAS** não vai para as outras páginas, mas também fica guardada na sessão da aba: as duas continuam carregadas ao apertar F5, até usar **Limpar** ou fechar a aba.
 - Só entram as linhas de `Planta Interna - Manutenção Corretiva` (coluna D) com `Repetido` na coluna **Critério** (GD).
 - Cada TSK conta uma vez por planilha, mesmo com várias atividades. O card **Repetidos não iniciados** conta as TSKs em `Não iniciado` (coluna E) em qualquer atividade de qualquer planilha; elas vêm primeiro na tabela e têm filtro próprio.
-- **Resumo por estado**: Online, Não agendadas, Não iniciados e Total por estado do CM (coluna AK; sem CM reconhecido, pela UF), com filtro Todas, Fila técnica ou Centralizado. Os 8 estados da TNE aparecem sempre; **Outros** só quando há TSK.
+- **Resumo por estado**: total de TSKs repetidas por estado do CM, contando cada TSK uma vez mesmo que esteja nas duas planilhas (coluna AK; sem CM reconhecido, pela UF), com filtro Todas, Fila técnica ou Centralizado. Os 8 estados da TNE aparecem sempre; **Outros** só quando há TSK.
 - A tabela mostra TSK, planilha, provedor, estado, NE ID, CM, UF, prioridade (GI) e fim do SLA, com filtro por planilha e **Exportar Excel** (`chamados-repetidos-TNE-AAAA-MM-DD.xlsx`, com o filtro atual).
 - Colunas, tipo e valor do critério ficam nas constantes `COLUMNS`, `TARGET_TYPE` e `REPEATED_CRITERION` no início de `app/repetidos.js`.
 
