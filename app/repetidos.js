@@ -22,6 +22,25 @@ const SOURCES = {
 // Campo que usa a planilha compartilhada entre as páginas (shared-file.js).
 const SHARED_SOURCE = "online";
 
+// Estado pela sigla do CM (TNE-AL-…); sem CM reconhecido, pela coluna UF. Ordem: TNE 1, depois TNE 2.
+const STATES = {
+  AL: "ALAGOAS",
+  BA: "BAHIA",
+  PI: "PIAUÍ",
+  SE: "SERGIPE",
+  CE: "CEARÁ",
+  PB: "PARAÍBA",
+  PE: "PERNAMBUCO",
+  RN: "RIO GRANDE DO NORTE"
+};
+const OTHER_STATE = "Outros";
+const STATE_GROUP_DESCRIPTIONS = {
+  all: "TSKs repetidas de Planta Interna, agrupadas pelo estado do CM (coluna AK).",
+  technician: "Somente TSKs repetidas da fila técnica, agrupadas pelo estado do CM (coluna AK).",
+  commandCenter: "Somente TSKs repetidas do Centralizado, agrupadas pelo estado do CM (coluna AK)."
+};
+let currentStateGroup = "all";
+
 const feedback = document.getElementById("feedback");
 const results = document.getElementById("results");
 const clearButton = document.getElementById("clear-button");
@@ -210,6 +229,78 @@ function renderTable() {
   }
 }
 
+// Buckets TLP-T<número> são da fila técnica; os demais, do Centralizado (mesma regra do backlog).
+function isTechnicianBucket(bucket) {
+  return /^TLP-T\d+(?:-|$)/.test(String(bucket ?? "").trim().toLocaleUpperCase("pt-BR"));
+}
+
+function ticketState(ticket) {
+  const code = /^TNE-([A-Z]{2})-/.exec(ticket.cm.toUpperCase())?.[1] || ticket.uf.toUpperCase();
+  return STATES[code] || OTHER_STATE;
+}
+
+function renderStateSummary() {
+  const rows = document.getElementById("state-rows");
+  const foot = document.getElementById("state-foot");
+  document.getElementById("state-description").textContent = STATE_GROUP_DESCRIPTIONS[currentStateGroup];
+  for (const button of document.querySelectorAll(".state-group-button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.stateGroup === currentStateGroup));
+  }
+  const tickets = currentTickets.filter((ticket) => currentStateGroup === "all"
+    || isTechnicianBucket(ticket.bucket) === (currentStateGroup === "technician"));
+  const emptyCounts = () => ({ online: 0, unscheduled: 0, both: 0, total: 0 });
+  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, emptyCounts()]));
+  for (const ticket of tickets) {
+    const stateCounts = counts.get(ticketState(ticket));
+    for (const key of ticket.sources) stateCounts[key] += 1;
+    if (ticket.sources.length === 2) stateCounts.both += 1;
+    stateCounts.total += 1;
+  }
+
+  const columns = [
+    ["online", "text-[color:var(--green)]", "px-2"],
+    ["unscheduled", "text-[color:var(--orange)]", "px-2"],
+    ["both", "text-[color:var(--red)]", "px-2"],
+    ["total", "text-[color:var(--ink)]", "px-5"]
+  ];
+  const buildRow = (label, stateCounts, isTotal = false) => {
+    const row = document.createElement("tr");
+    const labelCell = document.createElement(isTotal ? "th" : "td");
+    if (isTotal) labelCell.scope = "row";
+    labelCell.className = `px-5 py-2.5 ${isTotal ? "text-[color:var(--ink)]" : "text-[color:var(--ink-4)]"}`;
+    labelCell.textContent = label;
+    row.append(labelCell);
+    for (const [key, color, padding] of columns) {
+      const cell = document.createElement("td");
+      cell.className = `tabular ${padding} py-2.5 text-right font-semibold ${color}`;
+      const unavailable = key === "both" ? Object.values(slots).some((slot) => !slot.analysis) : slots[key]?.analysis === null;
+      cell.textContent = unavailable ? "—" : stateCounts[key].toLocaleString("pt-BR");
+      row.append(cell);
+    }
+    return row;
+  };
+
+  foot.replaceChildren();
+  // Os estados da TNE aparecem sempre; "Outros" só quando tem TSK.
+  const filled = [...counts].filter(([state, stateCounts]) => state !== OTHER_STATE || stateCounts.total);
+  if (!tickets.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 5;
+    cell.className = "px-5 py-6 text-center text-sm text-[color:var(--muted)]";
+    cell.textContent = "Nenhuma TSK repetida neste grupo.";
+    row.append(cell);
+    rows.replaceChildren(row);
+    return;
+  }
+  rows.replaceChildren(...filled.map(([state, stateCounts]) => buildRow(state, stateCounts)));
+  const total = emptyCounts();
+  for (const [, stateCounts] of filled) {
+    for (const key of Object.keys(total)) total[key] += stateCounts[key];
+  }
+  foot.append(buildRow("Total", total, true));
+}
+
 function render(errorMessage = "") {
   const loaded = Object.values(slots).filter((slot) => slot.analysis);
   const anyFile = Object.values(slots).some((slot) => slot.fileName);
@@ -245,6 +336,7 @@ function render(errorMessage = "") {
     : "—";
   document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
+  renderStateSummary();
   renderTable();
 }
 
@@ -311,8 +403,15 @@ clearButton.addEventListener("click", () => {
   for (const slot of Object.values(slots)) clearSlot(slot);
   clearSharedFile();
   currentFilter = "all";
+  currentStateGroup = "all";
   render();
 });
+for (const button of document.querySelectorAll(".state-group-button")) {
+  button.addEventListener("click", () => {
+    currentStateGroup = button.dataset.stateGroup;
+    renderStateSummary();
+  });
+}
 
 // Planilha importada no Report Backlog ou na Análise diária de técnicos (mesma aba do navegador).
 const sharedFile = loadSharedFile();
