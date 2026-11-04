@@ -14,6 +14,7 @@ const COLUMNS = {
 };
 const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
 const REPEATED_CRITERION = "Repetido";
+const NOT_STARTED_STATUS = "Não iniciado";
 
 // storageKey: onde a planilha fica guardada na sessão (shared-file.js) para voltar após o F5.
 // A ONLINE usa a chave compartilhada com o Backlog e a Análise de técnicos; a NÃO AGENDADAS, uma só desta página.
@@ -129,6 +130,7 @@ async function loadFile(slot, file, fromShared = false) {
 }
 
 // Lê a aba escolhida e guarda as TSKs de Planta Interna com "Repetido" na coluna Critério (uma linha por TSK).
+// Uma TSK com várias atividades conta como não iniciada se alguma delas estiver em "Não iniciado".
 function analyzeSlot(slot) {
   const sheetName = slot.picker.value || slot.workbook.SheetNames[0];
   const rows = XLSX.utils.sheet_to_json(slot.workbook.Sheets[sheetName], { header: 1, defval: "", raw: false });
@@ -140,14 +142,18 @@ function analyzeSlot(slot) {
     dataRows += 1;
     if (normalizeText(row[index.criterion]) !== normalizeText(REPEATED_CRITERION)) continue;
     const tsk = String(row[index.tsk] ?? "").trim() || `Linha ${rowNumber + 1}`;
-    if (tickets.has(tsk)) continue;
-    tickets.set(tsk, Object.fromEntries(Object.keys(COLUMNS).map((key) => [key, String(row[index[key]] ?? "").trim()])));
+    const ticket = Object.fromEntries(Object.keys(COLUMNS).map((key) => [key, String(row[index[key]] ?? "").trim()]));
+    ticket.notStarted = normalizeText(ticket.status) === normalizeText(NOT_STARTED_STATUS);
+    const existing = tickets.get(tsk);
+    if (!existing) tickets.set(tsk, ticket);
+    else if (ticket.notStarted && !existing.notStarted) Object.assign(existing, { status: ticket.status, notStarted: true });
   }
   slot.analysis = { sheetName, dataRows, tickets };
   render();
 }
 
-// Junta as TSKs repetidas das duas planilhas; os dados da ONLINE têm prioridade.
+// Junta as TSKs repetidas das duas planilhas; os dados da ONLINE têm prioridade, mas
+// a TSK fica como não iniciada se estiver em "Não iniciado" em qualquer uma delas.
 function mergeTickets() {
   const merged = new Map();
   for (const slot of Object.values(slots)) {
@@ -155,17 +161,18 @@ function mergeTickets() {
     for (const [tsk, ticket] of slot.analysis.tickets) {
       const entry = merged.get(tsk) || { ...ticket, tsk, sources: [] };
       entry.sources.push(slot.key);
+      if (ticket.notStarted && !entry.notStarted) Object.assign(entry, { status: ticket.status, notStarted: true });
       merged.set(tsk, entry);
     }
   }
   return [...merged.values()].sort((a, b) =>
-    b.sources.length - a.sources.length
+    Number(b.notStarted) - Number(a.notStarted)
     || a.priority.localeCompare(b.priority, "pt-BR", { numeric: true })
     || a.tsk.localeCompare(b.tsk, "pt-BR"));
 }
 
 function filterTickets(tickets) {
-  if (currentFilter === "both") return tickets.filter((ticket) => ticket.sources.length === 2);
+  if (currentFilter === "notStarted") return tickets.filter((ticket) => ticket.notStarted);
   if (currentFilter === "all") return tickets;
   return tickets.filter((ticket) => ticket.sources.includes(currentFilter));
 }
@@ -230,8 +237,9 @@ function renderTable() {
 }
 
 // Buckets TLP-T<número> são da fila técnica; os demais, do Centralizado (mesma regra do backlog).
+// Aceita espaço depois do hífen, como em "TLP- T3751680-…" na extração do TOA.
 function isTechnicianBucket(bucket) {
-  return /^TLP-T\d+(?:-|$)/.test(String(bucket ?? "").trim().toLocaleUpperCase("pt-BR"));
+  return /^TLP-\s*T\d+(?:-|$)/.test(String(bucket ?? "").trim().toLocaleUpperCase("pt-BR"));
 }
 
 function ticketState(ticket) {
@@ -248,19 +256,19 @@ function renderStateSummary() {
   }
   const tickets = currentTickets.filter((ticket) => currentStateGroup === "all"
     || isTechnicianBucket(ticket.bucket) === (currentStateGroup === "technician"));
-  const emptyCounts = () => ({ online: 0, unscheduled: 0, both: 0, total: 0 });
+  const emptyCounts = () => ({ online: 0, unscheduled: 0, notStarted: 0, total: 0 });
   const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, emptyCounts()]));
   for (const ticket of tickets) {
     const stateCounts = counts.get(ticketState(ticket));
     for (const key of ticket.sources) stateCounts[key] += 1;
-    if (ticket.sources.length === 2) stateCounts.both += 1;
+    if (ticket.notStarted) stateCounts.notStarted += 1;
     stateCounts.total += 1;
   }
 
   const columns = [
     ["online", "text-[color:var(--green)]", "px-2"],
     ["unscheduled", "text-[color:var(--orange)]", "px-2"],
-    ["both", "text-[color:var(--red)]", "px-2"],
+    ["notStarted", "text-[color:var(--red)]", "px-2"],
     ["total", "text-[color:var(--ink)]", "px-5"]
   ];
   const buildRow = (label, stateCounts, isTotal = false) => {
@@ -273,7 +281,7 @@ function renderStateSummary() {
     for (const [key, color, padding] of columns) {
       const cell = document.createElement("td");
       cell.className = `tabular ${padding} py-2.5 text-right font-semibold ${color}`;
-      const unavailable = key === "both" ? Object.values(slots).some((slot) => !slot.analysis) : slots[key]?.analysis === null;
+      const unavailable = slots[key]?.analysis === null;
       cell.textContent = unavailable ? "—" : stateCounts[key].toLocaleString("pt-BR");
       row.append(cell);
     }
@@ -331,9 +339,7 @@ function render(errorMessage = "") {
       ? `de ${analysis.dataRows} chamados de Planta Interna`
       : "Planilha não anexada";
   }
-  document.getElementById("count-both").textContent = loaded.length === 2
-    ? currentTickets.filter((ticket) => ticket.sources.length === 2).length
-    : "—";
+  document.getElementById("count-not-started").textContent = currentTickets.filter((ticket) => ticket.notStarted).length;
   document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
   renderStateSummary();
