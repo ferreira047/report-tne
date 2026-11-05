@@ -179,7 +179,6 @@ function mergeTickets() {
 function filterTickets(tickets) {
   const byState = tickets.filter((ticket) => (!currentStateFilter || ticketState(ticket) === currentStateFilter)
     && (!currentStatusFilter || normalizeText(ticket.status) === currentStatusFilter));
-  if (currentFilter === "notStarted") return byState.filter((ticket) => ticket.notStarted);
   if (currentFilter === "all") return byState;
   return byState.filter((ticket) => ticket.sources.includes(currentFilter));
 }
