@@ -6,7 +6,6 @@ const COLUMNS = {
   type: "D",
   status: "E",
   uf: "K",
-  slaEnd: "U",
   cm: "AK",
   neId: "CF",
   criterion: "GD",
@@ -194,7 +193,7 @@ function renderTable() {
   if (!tickets.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 9;
+    cell.colSpan = 8;
     cell.className = "px-5 py-6 text-center text-sm text-[color:var(--muted)]";
     cell.textContent = "Nenhum chamado repetido neste filtro.";
     row.append(cell);
@@ -211,8 +210,7 @@ function renderTable() {
         ["neId", "tabular text-[color:var(--ink-3)]"],
         ["cm", "text-[color:var(--ink-3)]"],
         ["uf", "text-[color:var(--ink-3)]"],
-        ["priority", "tabular text-[color:var(--ink-3)]"],
-        ["slaEnd", "tabular whitespace-nowrap text-[color:var(--ink-3)]"]
+        ["priority", "tabular text-[color:var(--ink-3)]"]
       ];
       row.append(...cells.map(([key, className]) => {
         const cell = document.createElement("td");
@@ -349,11 +347,10 @@ function exportRepeated() {
     "NE ID": ticket.neId,
     CM: ticket.cm,
     UF: ticket.uf,
-    Prioridade: ticket.priority,
-    "Fim SLA": ticket.slaEnd
+    Prioridade: ticket.priority
   }));
   const sheet = XLSX.utils.json_to_sheet(rows);
-  sheet["!cols"] = [18, 22, 40, 14, 12, 22, 6, 11, 16].map((wch) => ({ wch }));
+  sheet["!cols"] = [18, 22, 40, 14, 12, 22, 6, 11].map((wch) => ({ wch }));
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, "Repetidos");
   XLSX.writeFile(book, `chamados-repetidos-TNE-${new Date().toISOString().slice(0, 10)}.xlsx`);
