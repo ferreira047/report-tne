@@ -256,41 +256,57 @@ function renderStateSummary() {
   }
   const tickets = currentTickets.filter((ticket) => currentStateGroup === "all"
     || isTechnicianBucket(ticket.bucket) === (currentStateGroup === "technician"));
-  // Cada TSK conta uma vez, esteja numa planilha ou nas duas.
-  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, 0]));
+  const emptyCounts = () => ({ online: 0, unscheduled: 0, notStarted: 0, total: 0 });
+  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, emptyCounts()]));
   for (const ticket of tickets) {
-    const state = ticketState(ticket);
-    counts.set(state, counts.get(state) + 1);
+    const stateCounts = counts.get(ticketState(ticket));
+    for (const key of ticket.sources) stateCounts[key] += 1;
+    if (ticket.notStarted) stateCounts.notStarted += 1;
+    stateCounts.total += 1;
   }
 
-  const buildRow = (label, count, isTotal = false) => {
+  const columns = [
+    ["online", "text-[color:var(--green)]", "px-2"],
+    ["unscheduled", "text-[color:var(--orange)]", "px-2"],
+    ["notStarted", "text-[color:var(--red)]", "px-2"],
+    ["total", "text-[color:var(--ink)]", "px-5"]
+  ];
+  const buildRow = (label, stateCounts, isTotal = false) => {
     const row = document.createElement("tr");
     const labelCell = document.createElement(isTotal ? "th" : "td");
     if (isTotal) labelCell.scope = "row";
     labelCell.className = `px-5 py-2.5 ${isTotal ? "text-[color:var(--ink)]" : "text-[color:var(--ink-4)]"}`;
     labelCell.textContent = label;
-    const cell = document.createElement("td");
-    cell.className = "tabular px-5 py-2.5 text-right font-semibold text-[color:var(--ink)]";
-    cell.textContent = count.toLocaleString("pt-BR");
-    row.append(labelCell, cell);
+    row.append(labelCell);
+    for (const [key, color, padding] of columns) {
+      const cell = document.createElement("td");
+      cell.className = `tabular ${padding} py-2.5 text-right font-semibold ${color}`;
+      const unavailable = slots[key]?.analysis === null;
+      cell.textContent = unavailable ? "—" : stateCounts[key].toLocaleString("pt-BR");
+      row.append(cell);
+    }
     return row;
   };
 
   foot.replaceChildren();
+  // Os estados da TNE aparecem sempre; "Outros" só quando tem TSK.
+  const filled = [...counts].filter(([state, stateCounts]) => state !== OTHER_STATE || stateCounts.total);
   if (!tickets.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 2;
+    cell.colSpan = 5;
     cell.className = "px-5 py-6 text-center text-sm text-[color:var(--muted)]";
     cell.textContent = "Nenhuma TSK repetida neste grupo.";
     row.append(cell);
     rows.replaceChildren(row);
     return;
   }
-  // Os estados da TNE aparecem sempre; "Outros" só quando tem TSK.
-  const filled = [...counts].filter(([state, count]) => state !== OTHER_STATE || count);
-  rows.replaceChildren(...filled.map(([state, count]) => buildRow(state, count)));
-  foot.append(buildRow("Total", tickets.length, true));
+  rows.replaceChildren(...filled.map(([state, stateCounts]) => buildRow(state, stateCounts)));
+  const total = emptyCounts();
+  for (const [, stateCounts] of filled) {
+    for (const key of Object.keys(total)) total[key] += stateCounts[key];
+  }
+  foot.append(buildRow("Total", total, true));
 }
 
 function render(errorMessage = "") {
@@ -316,13 +332,6 @@ function render(errorMessage = "") {
     return;
   }
   currentTickets = mergeTickets();
-  for (const key of Object.keys(SOURCES)) {
-    const analysis = slots[key].analysis;
-    document.getElementById(`count-${key}`).textContent = analysis ? analysis.tickets.size : "—";
-    document.getElementById(`count-${key}-note`).textContent = analysis
-      ? `de ${analysis.dataRows} chamados de Planta Interna`
-      : "Planilha não anexada";
-  }
   document.getElementById("count-not-started").textContent = currentTickets.filter((ticket) => ticket.notStarted).length;
   document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
