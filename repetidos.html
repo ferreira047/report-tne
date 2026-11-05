@@ -132,39 +132,33 @@
           <h2 class="mt-1 text-xl font-semibold">Chamados de Planta Interna com flag de repetido</h2>
         </div>
 
-        <div class="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
+        <div class="mb-7 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+          <section class="panel overflow-hidden rounded-md" aria-labelledby="state-title">
+            <div class="px-5 pb-3 pt-5">
+              <h3 id="state-title" class="font-semibold">Chamados repetidos por estado</h3>
+              <p id="state-description" class="mt-1 text-xs text-[color:var(--muted)]">TSKs repetidas de Planta Interna, agrupadas pelo estado do CM (coluna AK).</p>
+              <div role="group" aria-label="Grupo das TSKs" class="mt-3 inline-flex rounded-sm border border-[color:var(--line-strong)] p-0.5 text-xs font-semibold">
+                <button type="button" data-state-group="all" aria-pressed="true" class="state-group-button rounded-sm px-3 py-1.5">Todas</button>
+                <button type="button" data-state-group="technician" aria-pressed="false" class="state-group-button rounded-sm px-3 py-1.5">Fila técnica</button>
+                <button type="button" data-state-group="commandCenter" aria-pressed="false" class="state-group-button rounded-sm px-3 py-1.5">Centralizado</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[340px] text-left text-sm">
+                <thead class="bg-[color:var(--sunken)] text-[11px] uppercase tracking-wide text-[color:var(--muted)]">
+                  <tr><th scope="col" class="px-5 py-2.5 font-semibold">Estado</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Online</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Não agend.</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Não inic.</th><th scope="col" class="px-5 py-2.5 text-right font-semibold">Total</th></tr>
+                </thead>
+                <tbody id="state-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+                <tfoot id="state-foot" class="border-t border-[color:var(--line)] bg-[color:var(--sunken)] font-semibold"></tfoot>
+              </table>
+            </div>
+          </section>
           <article class="panel rounded-md border-l-4 border-l-[color:var(--blue)] p-4 sm:p-5">
             <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Total de TSKs repetidas</p>
             <p id="count-total" class="tabular mt-3 text-3xl font-semibold tracking-tight">0</p>
             <p class="mt-1 text-xs text-[color:var(--muted)]">Online e Não agendadas, sem contar a mesma TSK duas vezes</p>
           </article>
-          <article class="panel rounded-md border-l-4 border-l-[color:var(--red)] p-4 sm:p-5">
-            <p class="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Repetidos não iniciados</p>
-            <p id="count-not-started" class="tabular mt-3 text-3xl font-semibold tracking-tight text-[color:var(--red)]">0</p>
-            <p class="mt-1 text-xs text-[color:var(--muted)]">Estado "Não iniciado" em qualquer planilha</p>
-          </article>
         </div>
-
-        <section class="panel mb-7 overflow-hidden rounded-md lg:max-w-2xl" aria-labelledby="state-title">
-          <div class="px-5 pb-3 pt-5">
-            <h3 id="state-title" class="font-semibold">Chamados repetidos por estado</h3>
-            <p id="state-description" class="mt-1 text-xs text-[color:var(--muted)]">TSKs repetidas de Planta Interna, agrupadas pelo estado do CM (coluna AK).</p>
-            <div role="group" aria-label="Grupo das TSKs" class="mt-3 inline-flex rounded-sm border border-[color:var(--line-strong)] p-0.5 text-xs font-semibold">
-              <button type="button" data-state-group="all" aria-pressed="true" class="state-group-button rounded-sm px-3 py-1.5">Todas</button>
-              <button type="button" data-state-group="technician" aria-pressed="false" class="state-group-button rounded-sm px-3 py-1.5">Fila técnica</button>
-              <button type="button" data-state-group="commandCenter" aria-pressed="false" class="state-group-button rounded-sm px-3 py-1.5">Centralizado</button>
-            </div>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[340px] text-left text-sm">
-              <thead class="bg-[color:var(--sunken)] text-[11px] uppercase tracking-wide text-[color:var(--muted)]">
-                <tr><th scope="col" class="px-5 py-2.5 font-semibold">Estado</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Online</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Não agend.</th><th scope="col" class="px-2 py-2.5 text-right font-semibold">Não inic.</th><th scope="col" class="px-5 py-2.5 text-right font-semibold">Total</th></tr>
-              </thead>
-              <tbody id="state-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
-              <tfoot id="state-foot" class="border-t border-[color:var(--line)] bg-[color:var(--sunken)] font-semibold"></tfoot>
-            </table>
-          </div>
-        </section>
 
         <section class="panel mb-7 overflow-hidden rounded-md" aria-labelledby="repeated-title">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line-2)] px-5 py-4">
@@ -210,6 +204,6 @@
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Chamados Repetidos <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/repetidos.js?v=20261104h"></script>
+  <script src="app/repetidos.js?v=20261104i"></script>
 </body>
 </html>

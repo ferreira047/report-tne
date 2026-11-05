@@ -332,7 +332,6 @@ function render(errorMessage = "") {
     return;
   }
   currentTickets = mergeTickets();
-  document.getElementById("count-not-started").textContent = currentTickets.filter((ticket) => ticket.notStarted).length;
   document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
   renderStateSummary();
