@@ -29,6 +29,10 @@
     .filter-button { color: var(--ink-3); transition: background-color 160ms ease, color 160ms ease; }
     .filter-button:hover { background: var(--green-soft); }
     .filter-button[aria-pressed="true"] { background: var(--green-solid); color: #fff; }
+    .sort-button { transition: background-color 160ms ease, color 160ms ease; }
+    .sort-button:hover { background: var(--green-soft); color: var(--green); }
+    .sort-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    .sort-button[aria-pressed="true"] { background: var(--green-solid); color: #fff; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
     }
@@ -156,7 +160,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line-2)] px-5 py-4">
             <div>
               <h3 id="repeated-title" class="font-semibold">TSKs com critério "Repetido"</h3>
-              <p class="mt-1 text-xs text-[color:var(--muted)]">As não iniciadas aparecem primeiro, depois por prioridade. <span id="table-total" class="font-medium"></span></p>
+              <p class="mt-1 text-xs text-[color:var(--muted)]">As não iniciadas aparecem primeiro, depois por prioridade; o botão A–Z do CM ordena pelo CM. <span id="table-total" class="font-medium"></span></p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <label for="state-filter" class="sr-only">Filtrar por estado</label>
@@ -185,7 +189,12 @@
                   <th scope="col" class="px-4 py-3 font-semibold">Provedor</th>
                   <th scope="col" class="px-4 py-3 font-semibold">Status</th>
                   <th scope="col" class="px-4 py-3 font-semibold">NE ID</th>
-                  <th scope="col" class="px-4 py-3 font-semibold">CM</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">
+                    <button id="cm-sort-button" type="button" aria-pressed="false" title="Ordenar pelo CM de A a Z" class="sort-button inline-flex items-center gap-1.5 rounded-sm px-1.5 py-0.5 -mx-1.5 uppercase tracking-wide">
+                      CM
+                      <span class="rounded-sm border border-current px-1 text-[10px] leading-4">A–Z</span>
+                    </button>
+                  </th>
                   <th scope="col" class="px-4 py-3 font-semibold">UF</th>
                   <th scope="col" class="px-4 py-3 font-semibold">Prioridade</th>
                 </tr>
@@ -201,6 +210,6 @@
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Chamados Repetidos <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/repetidos.js?v=20261104t"></script>
+  <script src="app/repetidos.js?v=20261104u"></script>
 </body>
 </html>

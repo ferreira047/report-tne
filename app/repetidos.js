@@ -53,6 +53,8 @@ const clearButton = document.getElementById("clear-button");
 let currentFilter = "all";
 // Estado (UF do CM) escolhido no filtro da tabela; vazio mostra todos.
 let currentStateFilter = "";
+// Botão A–Z no cabeçalho CM: ordena a tabela (e o Excel) pelo CM em vez da ordem padrão.
+let sortByCm = false;
 // Status (coluna E, normalizado) escolhido no filtro da tabela; vazio mostra todos.
 // Abre sempre em "Não iniciado".
 const DEFAULT_STATUS_FILTER = normalizeText(NOT_STARTED_STATUS);
@@ -238,8 +240,17 @@ function renderStatusOptions() {
   statusFilter.value = currentStatusFilter;
 }
 
+function sortTickets(tickets) {
+  if (!sortByCm) return tickets;
+  return [...tickets].sort((a, b) => a.cm.localeCompare(b.cm, "pt-BR", { sensitivity: "base" })
+    || a.tsk.localeCompare(b.tsk, "pt-BR"));
+}
+
 function renderTable() {
-  const tickets = filterTickets(currentTickets);
+  const tickets = sortTickets(filterTickets(currentTickets));
+  const cmSort = document.getElementById("cm-sort-button");
+  cmSort.setAttribute("aria-pressed", String(sortByCm));
+  cmSort.title = sortByCm ? "Voltar à ordem padrão" : "Ordenar pelo CM de A a Z";
   const body = document.getElementById("repeated-rows");
   if (!tickets.length) {
     const row = document.createElement("tr");
@@ -382,7 +393,7 @@ function render(errorMessage = "") {
 // Excel no formato do backlog: aba geral ("Visão geral", com o estado) e uma aba por estado.
 // Segue os filtros da tabela; os 8 estados da TNE têm aba sempre, "Outros" só quando tem TSK.
 function exportRepeated() {
-  const tickets = filterTickets(currentTickets);
+  const tickets = sortTickets(filterTickets(currentTickets));
   if (!tickets.length || !window.XLSX) return;
   const header = ["TSK", "Planilha", "Provedor", "Status", "NE ID", "CM", "UF", "Prioridade"];
   const widths = [18, 22, 40, 14, 12, 22, 6, 11];
@@ -468,6 +479,10 @@ stateFilter.addEventListener("change", () => {
 });
 document.getElementById("status-filter").addEventListener("change", (event) => {
   currentStatusFilter = event.target.value;
+  renderTable();
+});
+document.getElementById("cm-sort-button").addEventListener("click", () => {
+  sortByCm = !sortByCm;
   renderTable();
 });
 document.getElementById("export-button").addEventListener("click", exportRepeated);
