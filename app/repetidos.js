@@ -34,12 +34,6 @@ const STATES = {
   RN: "RIO GRANDE DO NORTE"
 };
 const OTHER_STATE = "Outros";
-const STATE_GROUP_DESCRIPTIONS = {
-  all: "TSKs dos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK).",
-  technician: "Somente TSKs da fila técnica nos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK).",
-  commandCenter: "Somente TSKs do Centralizado nos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK)."
-};
-let currentStateGroup = "all";
 // Colunas do resumo por estado em "Todos os status" (key = status normalizado da coluna E).
 // Outros status (ex.: "Iniciado") entram só no Total.
 const STATE_STATUS_COLUMNS = [
@@ -257,12 +251,6 @@ function renderTable() {
   renderStateSummary();
 }
 
-// Buckets TLP-T<número> são da fila técnica; os demais, do Centralizado (mesma regra do backlog).
-// Aceita espaço depois do hífen, como em "TLP- T3751680-…" na extração do TOA.
-function isTechnicianBucket(bucket) {
-  return /^TLP-\s*T\d+(?:-|$)/.test(String(bucket ?? "").trim().toLocaleUpperCase("pt-BR"));
-}
-
 function ticketState(ticket) {
   const code = /^TNE-([A-Z]{2})-/.exec(ticket.cm.toUpperCase())?.[1] || ticket.uf.toUpperCase();
   return STATES[code] || OTHER_STATE;
@@ -271,13 +259,8 @@ function ticketState(ticket) {
 function renderStateSummary() {
   const rows = document.getElementById("state-rows");
   const foot = document.getElementById("state-foot");
-  document.getElementById("state-description").textContent = STATE_GROUP_DESCRIPTIONS[currentStateGroup];
-  for (const button of document.querySelectorAll(".state-group-button")) {
-    button.setAttribute("aria-pressed", String(button.dataset.stateGroup === currentStateGroup));
-  }
   // Mesmas TSKs da tabela de baixo (filtros de estado, status e planilha), cada uma contada uma vez.
-  const tickets = filterTickets(currentTickets).filter((ticket) => currentStateGroup === "all"
-    || isTechnicianBucket(ticket.bucket) === (currentStateGroup === "technician"));
+  const tickets = filterTickets(currentTickets);
   // Em "Todos os status", uma coluna por status; com um status escolhido, só o total.
   const columns = currentStatusFilter ? [] : STATE_STATUS_COLUMNS;
   const emptyCounts = () => Object.fromEntries([...columns.map(({ key }) => [key, 0]), ["total", 0]]);
@@ -450,15 +433,8 @@ clearButton.addEventListener("click", () => {
   currentStateFilter = "";
   stateFilter.value = "";
   currentStatusFilter = DEFAULT_STATUS_FILTER;
-  currentStateGroup = "all";
   render();
 });
-for (const button of document.querySelectorAll(".state-group-button")) {
-  button.addEventListener("click", () => {
-    currentStateGroup = button.dataset.stateGroup;
-    renderStateSummary();
-  });
-}
 
 // Planilhas guardadas na sessão: a ONLINE pode vir do Report Backlog ou da Análise de técnicos.
 for (const slot of Object.values(slots)) {
