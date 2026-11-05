@@ -35,9 +35,9 @@ const STATES = {
 };
 const OTHER_STATE = "Outros";
 const STATE_GROUP_DESCRIPTIONS = {
-  all: "TSKs repetidas de Planta Interna, agrupadas pelo estado do CM (coluna AK).",
-  technician: "Somente TSKs repetidas da fila técnica, agrupadas pelo estado do CM (coluna AK).",
-  commandCenter: "Somente TSKs repetidas do Centralizado, agrupadas pelo estado do CM (coluna AK)."
+  all: "TSKs dos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK).",
+  technician: "Somente TSKs da fila técnica nos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK).",
+  commandCenter: "Somente TSKs do Centralizado nos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK)."
 };
 let currentStateGroup = "all";
 
@@ -244,6 +244,8 @@ function renderTable() {
   for (const button of document.querySelectorAll(".filter-button")) {
     button.setAttribute("aria-pressed", String(button.dataset.filter === currentFilter));
   }
+  // O resumo por estado segue os filtros da tabela.
+  renderStateSummary();
 }
 
 // Buckets TLP-T<número> são da fila técnica; os demais, do Centralizado (mesma regra do backlog).
@@ -264,59 +266,43 @@ function renderStateSummary() {
   for (const button of document.querySelectorAll(".state-group-button")) {
     button.setAttribute("aria-pressed", String(button.dataset.stateGroup === currentStateGroup));
   }
-  const tickets = currentTickets.filter((ticket) => currentStateGroup === "all"
+  // Mesmas TSKs da tabela de baixo (filtros de estado, status e planilha), cada uma contada uma vez.
+  const tickets = filterTickets(currentTickets).filter((ticket) => currentStateGroup === "all"
     || isTechnicianBucket(ticket.bucket) === (currentStateGroup === "technician"));
-  const emptyCounts = () => ({ online: 0, unscheduled: 0, notStarted: 0, total: 0 });
-  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, emptyCounts()]));
+  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, 0]));
   for (const ticket of tickets) {
-    const stateCounts = counts.get(ticketState(ticket));
-    for (const key of ticket.sources) stateCounts[key] += 1;
-    if (ticket.notStarted) stateCounts.notStarted += 1;
-    stateCounts.total += 1;
+    const state = ticketState(ticket);
+    counts.set(state, counts.get(state) + 1);
   }
 
-  const columns = [
-    ["online", "text-[color:var(--green)]", "px-2"],
-    ["unscheduled", "text-[color:var(--orange)]", "px-2"],
-    ["notStarted", "text-[color:var(--red)]", "px-2"],
-    ["total", "text-[color:var(--ink)]", "px-5"]
-  ];
-  const buildRow = (label, stateCounts, isTotal = false) => {
+  const buildRow = (label, count, isTotal = false) => {
     const row = document.createElement("tr");
     const labelCell = document.createElement(isTotal ? "th" : "td");
     if (isTotal) labelCell.scope = "row";
     labelCell.className = `px-5 py-2.5 ${isTotal ? "text-[color:var(--ink)]" : "text-[color:var(--ink-4)]"}`;
     labelCell.textContent = label;
-    row.append(labelCell);
-    for (const [key, color, padding] of columns) {
-      const cell = document.createElement("td");
-      cell.className = `tabular ${padding} py-2.5 text-right font-semibold ${color}`;
-      const unavailable = slots[key]?.analysis === null;
-      cell.textContent = unavailable ? "—" : stateCounts[key].toLocaleString("pt-BR");
-      row.append(cell);
-    }
+    const cell = document.createElement("td");
+    cell.className = "tabular px-5 py-2.5 text-right font-semibold text-[color:var(--ink)]";
+    cell.textContent = count.toLocaleString("pt-BR");
+    row.append(labelCell, cell);
     return row;
   };
 
   foot.replaceChildren();
-  // Os estados da TNE aparecem sempre; "Outros" só quando tem TSK.
-  const filled = [...counts].filter(([state, stateCounts]) => state !== OTHER_STATE || stateCounts.total);
   if (!tickets.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 5;
+    cell.colSpan = 2;
     cell.className = "px-5 py-6 text-center text-sm text-[color:var(--muted)]";
-    cell.textContent = "Nenhuma TSK repetida neste grupo.";
+    cell.textContent = "Nenhuma TSK repetida com estes filtros.";
     row.append(cell);
     rows.replaceChildren(row);
     return;
   }
-  rows.replaceChildren(...filled.map(([state, stateCounts]) => buildRow(state, stateCounts)));
-  const total = emptyCounts();
-  for (const [, stateCounts] of filled) {
-    for (const key of Object.keys(total)) total[key] += stateCounts[key];
-  }
-  foot.append(buildRow("Total", total, true));
+  // Os estados da TNE aparecem sempre; "Outros" só quando tem TSK.
+  const filled = [...counts].filter(([state, count]) => state !== OTHER_STATE || count);
+  rows.replaceChildren(...filled.map(([state, count]) => buildRow(state, count)));
+  foot.append(buildRow("Total", tickets.length, true));
 }
 
 function render(errorMessage = "") {
@@ -344,7 +330,6 @@ function render(errorMessage = "") {
   currentTickets = mergeTickets();
   document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
-  renderStateSummary();
   renderStatusOptions();
   renderTable();
 }
