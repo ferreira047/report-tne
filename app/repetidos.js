@@ -241,6 +241,7 @@ function renderTable() {
     }));
   }
   document.getElementById("table-total").textContent = `${tickets.length} TSK(s)`;
+  document.getElementById("count-total").textContent = tickets.length.toLocaleString("pt-BR");
   for (const button of document.querySelectorAll(".filter-button")) {
     button.setAttribute("aria-pressed", String(button.dataset.filter === currentFilter));
   }
@@ -328,7 +329,6 @@ function render(errorMessage = "") {
     return;
   }
   currentTickets = mergeTickets();
-  document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
   renderStatusOptions();
   renderTable();
