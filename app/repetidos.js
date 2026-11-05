@@ -40,6 +40,14 @@ const STATE_GROUP_DESCRIPTIONS = {
   commandCenter: "Somente TSKs do Centralizado nos filtros da tabela abaixo, agrupadas pelo estado do CM (coluna AK)."
 };
 let currentStateGroup = "all";
+// Colunas do resumo por estado em "Todos os status" (key = status normalizado da coluna E).
+// Outros status (ex.: "Iniciado") entram só no Total.
+const STATE_STATUS_COLUMNS = [
+  { key: "cancelada", label: "Cancel.", color: "text-[color:var(--orange)]" },
+  { key: "concluida", label: "Concl.", color: "text-[color:var(--green)]" },
+  { key: "nao iniciado", label: "Não inic.", color: "text-[color:var(--red)]" },
+  { key: "pendente", label: "Pend.", color: "text-[color:var(--orange)]" }
+];
 
 const feedback = document.getElementById("feedback");
 const results = document.getElementById("results");
@@ -270,22 +278,43 @@ function renderStateSummary() {
   // Mesmas TSKs da tabela de baixo (filtros de estado, status e planilha), cada uma contada uma vez.
   const tickets = filterTickets(currentTickets).filter((ticket) => currentStateGroup === "all"
     || isTechnicianBucket(ticket.bucket) === (currentStateGroup === "technician"));
-  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, 0]));
+  // Em "Todos os status", uma coluna por status; com um status escolhido, só o total.
+  const columns = currentStatusFilter ? [] : STATE_STATUS_COLUMNS;
+  const emptyCounts = () => Object.fromEntries([...columns.map(({ key }) => [key, 0]), ["total", 0]]);
+  const counts = new Map([...Object.values(STATES), OTHER_STATE].map((state) => [state, emptyCounts()]));
   for (const ticket of tickets) {
-    const state = ticketState(ticket);
-    counts.set(state, counts.get(state) + 1);
+    const stateCounts = counts.get(ticketState(ticket));
+    const status = normalizeText(ticket.status);
+    if (status in stateCounts && status !== "total") stateCounts[status] += 1;
+    stateCounts.total += 1;
   }
 
-  const buildRow = (label, count, isTotal = false) => {
+  const headCell = (label, className) => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.className = `${className} py-2.5 font-semibold`;
+    cell.textContent = label;
+    return cell;
+  };
+  document.getElementById("state-head-row").replaceChildren(
+    headCell("Estado", "px-5"),
+    ...columns.map(({ label }) => headCell(label, "px-2 text-right")),
+    headCell("Total", "px-5 text-right")
+  );
+
+  const buildRow = (label, stateCounts, isTotal = false) => {
     const row = document.createElement("tr");
     const labelCell = document.createElement(isTotal ? "th" : "td");
     if (isTotal) labelCell.scope = "row";
     labelCell.className = `px-5 py-2.5 ${isTotal ? "text-[color:var(--ink)]" : "text-[color:var(--ink-4)]"}`;
     labelCell.textContent = label;
-    const cell = document.createElement("td");
-    cell.className = "tabular px-5 py-2.5 text-right font-semibold text-[color:var(--ink)]";
-    cell.textContent = count.toLocaleString("pt-BR");
-    row.append(labelCell, cell);
+    row.append(labelCell);
+    for (const { key, color } of [...columns, { key: "total", color: "text-[color:var(--ink)]" }]) {
+      const cell = document.createElement("td");
+      cell.className = `tabular ${key === "total" ? "px-5" : "px-2"} py-2.5 text-right font-semibold ${color}`;
+      cell.textContent = stateCounts[key].toLocaleString("pt-BR");
+      row.append(cell);
+    }
     return row;
   };
 
@@ -293,7 +322,7 @@ function renderStateSummary() {
   if (!tickets.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 2;
+    cell.colSpan = columns.length + 2;
     cell.className = "px-5 py-6 text-center text-sm text-[color:var(--muted)]";
     cell.textContent = "Nenhuma TSK repetida com estes filtros.";
     row.append(cell);
@@ -301,9 +330,13 @@ function renderStateSummary() {
     return;
   }
   // Os estados da TNE aparecem sempre; "Outros" só quando tem TSK.
-  const filled = [...counts].filter(([state, count]) => state !== OTHER_STATE || count);
-  rows.replaceChildren(...filled.map(([state, count]) => buildRow(state, count)));
-  foot.append(buildRow("Total", tickets.length, true));
+  const filled = [...counts].filter(([state, stateCounts]) => state !== OTHER_STATE || stateCounts.total);
+  rows.replaceChildren(...filled.map(([state, stateCounts]) => buildRow(state, stateCounts)));
+  const total = emptyCounts();
+  for (const [, stateCounts] of filled) {
+    for (const key of Object.keys(total)) total[key] += stateCounts[key];
+  }
+  foot.append(buildRow("Total", total, true));
 }
 
 function render(errorMessage = "") {

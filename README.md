@@ -77,7 +77,7 @@ Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de uplo
 - Só entram as linhas de `Planta Interna - Manutenção Corretiva` (coluna D) com `Repetido` na coluna **Critério** (GD).
 - Card **Total de TSKs repetidas** ao lado do resumo por estado: TSKs que passam pelos filtros da tabela (estado, status e planilha), cada uma contada uma vez. A quantidade de cada planilha aparece no aviso abaixo dos campos de upload.
 - Cada TSK conta uma vez por planilha, mesmo com várias atividades. As TSKs em `Não iniciado` (coluna E) em qualquer atividade de qualquer planilha vêm primeiro na tabela.
-- **Resumo por estado**: total de TSKs por estado do CM, seguindo os filtros da tabela (estado, status e planilha) (coluna AK; sem CM reconhecido, pela UF), com filtro Todas, Fila técnica ou Centralizado. Os 8 estados da TNE aparecem sempre; **Outros** só quando há TSK.
+- **Resumo por estado**: TSKs por estado do CM, seguindo os filtros da tabela (estado, status e planilha). Em **Todos os status**, mostra também as colunas Cancelada, Concluída, Não iniciado e Pendente; outros status entram só no Total (coluna AK; sem CM reconhecido, pela UF), com filtro Todas, Fila técnica ou Centralizado. Os 8 estados da TNE aparecem sempre; **Outros** só quando há TSK.
 - A tabela mostra TSK, provedor, status, NE ID, CM, UF e prioridade (GI), com filtro por estado (mesma regra do resumo por estado), por status (coluna E; abre em **Não iniciado**), por planilha e **Exportar Excel** (`chamados-repetidos-TNE-AAAA-MM-DD.xlsx`, com o filtro atual e a coluna Planilha, que não aparece na tela).
 - Colunas, tipo e valor do critério ficam nas constantes `COLUMNS`, `TARGET_TYPE` e `REPEATED_CRITERION` no início de `app/repetidos.js`.
 
