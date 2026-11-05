@@ -47,6 +47,8 @@ const clearButton = document.getElementById("clear-button");
 let currentFilter = "all";
 // Estado (UF do CM) escolhido no filtro da tabela; vazio mostra todos.
 let currentStateFilter = "";
+// Status (coluna E, normalizado) escolhido no filtro da tabela; vazio mostra todos.
+let currentStatusFilter = "";
 let currentTickets = [];
 
 // Estado de cada campo de upload (ONLINE e NÃO AGENDADAS).
@@ -173,10 +175,34 @@ function mergeTickets() {
 }
 
 function filterTickets(tickets) {
-  const byState = currentStateFilter ? tickets.filter((ticket) => ticketState(ticket) === currentStateFilter) : tickets;
+  const byState = tickets.filter((ticket) => (!currentStateFilter || ticketState(ticket) === currentStateFilter)
+    && (!currentStatusFilter || normalizeText(ticket.status) === currentStatusFilter));
   if (currentFilter === "notStarted") return byState.filter((ticket) => ticket.notStarted);
   if (currentFilter === "all") return byState;
   return byState.filter((ticket) => ticket.sources.includes(currentFilter));
+}
+
+// Opções do filtro de status: os status das TSKs carregadas ("pendente" e "Pendente" viram um só).
+function renderStatusOptions() {
+  const statusFilter = document.getElementById("status-filter");
+  const statuses = new Map();
+  for (const ticket of currentTickets) {
+    const key = normalizeText(ticket.status);
+    if (key && !statuses.has(key)) statuses.set(key, ticket.status.charAt(0).toLocaleUpperCase("pt-BR") + ticket.status.slice(1));
+  }
+  if (!statuses.has(currentStatusFilter)) currentStatusFilter = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = "Todos os status";
+  statusFilter.replaceChildren(allOption, ...[...statuses]
+    .sort(([, a], [, b]) => a.localeCompare(b, "pt-BR"))
+    .map(([key, label]) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = label;
+      return option;
+    }));
+  statusFilter.value = currentStatusFilter;
 }
 
 function sourceBadges(sources) {
@@ -336,6 +362,7 @@ function render(errorMessage = "") {
   document.getElementById("count-total").textContent = currentTickets.length;
   results.classList.remove("hidden");
   renderStateSummary();
+  renderStatusOptions();
   renderTable();
 }
 
@@ -408,6 +435,10 @@ stateFilter.addEventListener("change", () => {
   currentStateFilter = stateFilter.value;
   renderTable();
 });
+document.getElementById("status-filter").addEventListener("change", (event) => {
+  currentStatusFilter = event.target.value;
+  renderTable();
+});
 document.getElementById("export-button").addEventListener("click", exportRepeated);
 clearButton.addEventListener("click", () => {
   for (const slot of Object.values(slots)) {
@@ -417,6 +448,7 @@ clearButton.addEventListener("click", () => {
   currentFilter = "all";
   currentStateFilter = "";
   stateFilter.value = "";
+  currentStatusFilter = "";
   currentStateGroup = "all";
   render();
 });
