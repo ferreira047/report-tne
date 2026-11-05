@@ -379,23 +379,40 @@ function render(errorMessage = "") {
   renderTable();
 }
 
+// Excel no formato do backlog: aba geral ("Visão geral", com o estado) e uma aba por estado.
+// Segue os filtros da tabela; os 8 estados da TNE têm aba sempre, "Outros" só quando tem TSK.
 function exportRepeated() {
   const tickets = filterTickets(currentTickets);
   if (!tickets.length || !window.XLSX) return;
-  const rows = tickets.map((ticket) => ({
-    TSK: ticket.tsk,
-    Planilha: ticket.sources.map((key) => SOURCES[key].label).join(" + "),
-    Provedor: ticket.bucket,
-    Status: ticket.status,
-    "NE ID": ticket.neId,
-    CM: ticket.cm,
-    UF: ticket.uf,
-    Prioridade: ticket.priority
-  }));
-  const sheet = XLSX.utils.json_to_sheet(rows);
-  sheet["!cols"] = [18, 22, 40, 14, 12, 22, 6, 11].map((wch) => ({ wch }));
+  const header = ["TSK", "Planilha", "Provedor", "Status", "NE ID", "CM", "UF", "Prioridade"];
+  const widths = [18, 22, 40, 14, 12, 22, 6, 11];
+  const ticketRow = (ticket) => [
+    ticket.tsk,
+    ticket.sources.map((key) => SOURCES[key].label).join(" + "),
+    ticket.bucket,
+    ticket.status,
+    ticket.neId,
+    ticket.cm,
+    ticket.uf,
+    ticket.priority
+  ];
+  const stateOrder = [...Object.values(STATES), OTHER_STATE];
+  const ticketsByState = new Map(stateOrder.map((state) => [state, []]));
+  for (const ticket of tickets) ticketsByState.get(ticketState(ticket)).push(ticket);
+
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, "Repetidos");
+  const overview = XLSX.utils.aoa_to_sheet([
+    ["Estado", ...header],
+    ...[...ticketsByState].flatMap(([state, stateTickets]) => stateTickets.map((ticket) => [state, ...ticketRow(ticket)]))
+  ]);
+  overview["!cols"] = [20, ...widths].map((wch) => ({ wch }));
+  XLSX.utils.book_append_sheet(book, overview, "Visão geral");
+  for (const [state, stateTickets] of ticketsByState) {
+    if (state === OTHER_STATE && !stateTickets.length) continue;
+    const sheet = XLSX.utils.aoa_to_sheet([header, ...stateTickets.map(ticketRow)]);
+    sheet["!cols"] = widths.map((wch) => ({ wch }));
+    XLSX.utils.book_append_sheet(book, sheet, state);
+  }
   XLSX.writeFile(book, `chamados-repetidos-TNE-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
