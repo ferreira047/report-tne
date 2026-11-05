@@ -45,6 +45,8 @@ const feedback = document.getElementById("feedback");
 const results = document.getElementById("results");
 const clearButton = document.getElementById("clear-button");
 let currentFilter = "all";
+// Estado (UF do CM) escolhido no filtro da tabela; vazio mostra todos.
+let currentStateFilter = "";
 let currentTickets = [];
 
 // Estado de cada campo de upload (ONLINE e NÃO AGENDADAS).
@@ -171,9 +173,10 @@ function mergeTickets() {
 }
 
 function filterTickets(tickets) {
-  if (currentFilter === "notStarted") return tickets.filter((ticket) => ticket.notStarted);
-  if (currentFilter === "all") return tickets;
-  return tickets.filter((ticket) => ticket.sources.includes(currentFilter));
+  const byState = currentStateFilter ? tickets.filter((ticket) => ticketState(ticket) === currentStateFilter) : tickets;
+  if (currentFilter === "notStarted") return byState.filter((ticket) => ticket.notStarted);
+  if (currentFilter === "all") return byState;
+  return byState.filter((ticket) => ticket.sources.includes(currentFilter));
 }
 
 function sourceBadges(sources) {
@@ -343,7 +346,7 @@ function exportRepeated() {
     TSK: ticket.tsk,
     Planilha: ticket.sources.map((key) => SOURCES[key].label).join(" + "),
     Provedor: ticket.bucket,
-    Estado: ticket.status,
+    Status: ticket.status,
     "NE ID": ticket.neId,
     CM: ticket.cm,
     UF: ticket.uf,
@@ -393,6 +396,18 @@ for (const button of document.querySelectorAll(".filter-button")) {
     renderTable();
   });
 }
+const stateFilter = document.getElementById("state-filter");
+stateFilter.append(...[...Object.values(STATES), OTHER_STATE].map((state) => {
+  const option = document.createElement("option");
+  option.value = state;
+  // "RIO GRANDE DO NORTE" → "Rio Grande do Norte".
+  option.textContent = state.toLocaleLowerCase("pt-BR").replace(/(^|\s)(?!do\s)(\S)/g, (_, space, letter) => space + letter.toLocaleUpperCase("pt-BR"));
+  return option;
+}));
+stateFilter.addEventListener("change", () => {
+  currentStateFilter = stateFilter.value;
+  renderTable();
+});
 document.getElementById("export-button").addEventListener("click", exportRepeated);
 clearButton.addEventListener("click", () => {
   for (const slot of Object.values(slots)) {
@@ -400,6 +415,8 @@ clearButton.addEventListener("click", () => {
     clearSharedFile(SOURCES[slot.key].storageKey);
   }
   currentFilter = "all";
+  currentStateFilter = "";
+  stateFilter.value = "";
   currentStateGroup = "all";
   render();
 });

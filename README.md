@@ -78,7 +78,7 @@ Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de uplo
 - Card **Total de TSKs repetidas** (Online e Não agendadas juntas, cada TSK uma vez), ao lado do resumo por estado. A quantidade de cada planilha aparece no aviso abaixo dos campos de upload.
 - Cada TSK conta uma vez por planilha, mesmo com várias atividades. As TSKs em `Não iniciado` (coluna E) em qualquer atividade de qualquer planilha vêm primeiro na tabela, têm filtro próprio e coluna no resumo por estado.
 - **Resumo por estado**: Online, Não agendadas, Não iniciados e Total por estado do CM (coluna AK; sem CM reconhecido, pela UF), com filtro Todas, Fila técnica ou Centralizado. Os 8 estados da TNE aparecem sempre; **Outros** só quando há TSK.
-- A tabela mostra TSK, planilha, provedor, estado, NE ID, CM, UF e prioridade (GI), com filtro por planilha e **Exportar Excel** (`chamados-repetidos-TNE-AAAA-MM-DD.xlsx`, com o filtro atual).
+- A tabela mostra TSK, planilha, provedor, status, NE ID, CM, UF e prioridade (GI), com filtro por estado (mesma regra do resumo por estado), filtro por planilha e **Exportar Excel** (`chamados-repetidos-TNE-AAAA-MM-DD.xlsx`, com o filtro atual).
 - Colunas, tipo e valor do critério ficam nas constantes `COLUMNS`, `TARGET_TYPE` e `REPEATED_CRITERION` no início de `app/repetidos.js`.
 
 ## Tema claro e escuro

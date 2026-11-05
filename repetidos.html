@@ -167,6 +167,10 @@
               <p class="mt-1 text-xs text-[color:var(--muted)]">As não iniciadas aparecem primeiro, depois por prioridade. <span id="table-total" class="font-medium"></span></p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              <label for="state-filter" class="sr-only">Filtrar por estado</label>
+              <select id="state-filter" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+                <option value="">Todos os estados</option>
+              </select>
               <div role="group" aria-label="Planilha" class="inline-flex rounded-sm border border-[color:var(--line-strong)] p-0.5 text-xs font-semibold">
                 <button type="button" data-filter="all" aria-pressed="true" class="filter-button rounded-sm px-3 py-1.5">Todas</button>
                 <button type="button" data-filter="online" aria-pressed="false" class="filter-button rounded-sm px-3 py-1.5">Online</button>
@@ -185,7 +189,7 @@
                   <th scope="col" class="px-4 py-3 font-semibold">TSK</th>
                   <th scope="col" class="px-4 py-3 font-semibold">Planilha</th>
                   <th scope="col" class="px-4 py-3 font-semibold">Provedor</th>
-                  <th scope="col" class="px-4 py-3 font-semibold">Estado</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Status</th>
                   <th scope="col" class="px-4 py-3 font-semibold">NE ID</th>
                   <th scope="col" class="px-4 py-3 font-semibold">CM</th>
                   <th scope="col" class="px-4 py-3 font-semibold">UF</th>
@@ -203,6 +207,6 @@
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Chamados Repetidos <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/repetidos.js?v=20261104j"></script>
+  <script src="app/repetidos.js?v=20261104k"></script>
 </body>
 </html>
