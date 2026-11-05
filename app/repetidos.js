@@ -48,7 +48,9 @@ let currentFilter = "all";
 // Estado (UF do CM) escolhido no filtro da tabela; vazio mostra todos.
 let currentStateFilter = "";
 // Status (coluna E, normalizado) escolhido no filtro da tabela; vazio mostra todos.
-let currentStatusFilter = "";
+// Abre sempre em "Não iniciado".
+const DEFAULT_STATUS_FILTER = normalizeText(NOT_STARTED_STATUS);
+let currentStatusFilter = DEFAULT_STATUS_FILTER;
 let currentTickets = [];
 
 // Estado de cada campo de upload (ONLINE e NÃO AGENDADAS).
@@ -185,7 +187,8 @@ function filterTickets(tickets) {
 // Opções do filtro de status: os status das TSKs carregadas ("pendente" e "Pendente" viram um só).
 function renderStatusOptions() {
   const statusFilter = document.getElementById("status-filter");
-  const statuses = new Map();
+  // "Não iniciado" fica sempre na lista, mesmo sem TSK nesse status.
+  const statuses = new Map([[DEFAULT_STATUS_FILTER, NOT_STARTED_STATUS]]);
   for (const ticket of currentTickets) {
     const key = normalizeText(ticket.status);
     if (key && !statuses.has(key)) statuses.set(key, ticket.status.charAt(0).toLocaleUpperCase("pt-BR") + ticket.status.slice(1));
@@ -205,24 +208,13 @@ function renderStatusOptions() {
   statusFilter.value = currentStatusFilter;
 }
 
-function sourceBadges(sources) {
-  return sources.map((key) => {
-    const badge = document.createElement("span");
-    badge.className = key === "online"
-      ? "inline-flex rounded-sm bg-[color:var(--green-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--green)]"
-      : "inline-flex rounded-sm bg-[color:var(--orange-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--orange)]";
-    badge.textContent = SOURCES[key].label;
-    return badge;
-  });
-}
-
 function renderTable() {
   const tickets = filterTickets(currentTickets);
   const body = document.getElementById("repeated-rows");
   if (!tickets.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 8;
+    cell.colSpan = 7;
     cell.className = "px-5 py-6 text-center text-sm text-[color:var(--muted)]";
     cell.textContent = "Nenhum chamado repetido neste filtro.";
     row.append(cell);
@@ -233,7 +225,6 @@ function renderTable() {
       row.className = "hover:bg-[color:var(--hover)]";
       const cells = [
         ["tsk", "tabular font-semibold text-[color:var(--ink)]"],
-        ["sources", ""],
         ["bucket", "text-[color:var(--ink-3)]"],
         ["status", "text-[color:var(--ink-3)]"],
         ["neId", "tabular text-[color:var(--ink-3)]"],
@@ -244,14 +235,7 @@ function renderTable() {
       row.append(...cells.map(([key, className]) => {
         const cell = document.createElement("td");
         cell.className = `px-4 py-2.5 ${className}`;
-        if (key === "sources") {
-          const wrap = document.createElement("div");
-          wrap.className = "flex flex-wrap gap-1";
-          wrap.append(...sourceBadges(ticket.sources));
-          cell.append(wrap);
-        } else {
-          cell.textContent = ticket[key] || "—";
-        }
+        cell.textContent = ticket[key] || "—";
         return cell;
       }));
       return row;
@@ -448,7 +432,7 @@ clearButton.addEventListener("click", () => {
   currentFilter = "all";
   currentStateFilter = "";
   stateFilter.value = "";
-  currentStatusFilter = "";
+  currentStatusFilter = DEFAULT_STATUS_FILTER;
   currentStateGroup = "all";
   render();
 });
