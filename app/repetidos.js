@@ -14,12 +14,16 @@ const COLUMNS = {
 const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
 const REPEATED_CRITERION = "Repetido";
 const NOT_STARTED_STATUS = "Não iniciado";
+// Coluna Data: a ONLINE tem data em todas as atividades; a NÃO AGENDADAS vem com "-".
+// É por ela que a planilha anexada no campo errado é recusada.
+const COLUMN_DATE = "T";
 
 // storageKey: onde a planilha fica guardada na sessão (shared-file.js) para voltar após o F5.
 // A ONLINE usa a chave compartilhada com o Backlog e a Análise de técnicos; a NÃO AGENDADAS, uma só desta página.
+// scheduled: se a planilha tem data na coluna Data (COLUMN_DATE); serve para a trava de campo errado.
 const SOURCES = {
-  online: { label: "Online", storageKey: SHARED_FILE_KEY },
-  unscheduled: { label: "Não agendadas", storageKey: "reportFilaTecTNE.naoAgendadas" }
+  online: { label: "Online", storageKey: SHARED_FILE_KEY, scheduled: true },
+  unscheduled: { label: "Não agendadas", storageKey: "reportFilaTecTNE.naoAgendadas", scheduled: false }
 };
 
 // Estado pela sigla do CM (TNE-AL-…); sem CM reconhecido, pela coluna UF. Ordem: TNE 1, depois TNE 2.
@@ -65,7 +69,8 @@ const slots = Object.fromEntries(Object.keys(SOURCES).map((key) => [key, {
   picker: document.getElementById(`sheet-picker-${key}`),
   workbook: null,
   fileName: "",
-  analysis: null
+  analysis: null,
+  pendingFile: null
 }]));
 
 // Comparações de cabeçalho e critério ignoram acentos, caixa e espaços excedentes.
@@ -117,7 +122,8 @@ async function loadFile(slot, file, fromShared = false) {
     slot.workbook = null;
     return render(`${label}: não foi possível ler o arquivo. Confirme se ele é uma planilha válida. ${error.message || ""}`.trim());
   }
-  if (!fromShared) saveSharedFile(file, SOURCES[slot.key].storageKey);
+  // Só é guardada na sessão depois de conferir que é a planilha certa (analyzeSlot).
+  slot.pendingFile = fromShared ? null : file;
   const sharedNote = fromShared && SOURCES[slot.key].storageKey === SHARED_FILE_KEY ? " · mesma planilha do Report Backlog" : "";
   slot.meta.textContent = `Arquivo: ${file.name}${sharedNote}`;
   slot.meta.classList.remove("hidden");
@@ -142,6 +148,9 @@ function analyzeSlot(slot) {
   const sheetName = slot.picker.value || slot.workbook.SheetNames[0];
   const rows = XLSX.utils.sheet_to_json(slot.workbook.Sheets[sheetName], { header: 1, defval: "", raw: false });
   const index = Object.fromEntries(Object.entries(COLUMNS).map(([key, letter]) => [key, columnIndex(letter)]));
+  if (isScheduledSheet(rows) === !SOURCES[slot.key].scheduled) return rejectWrongSheet(slot);
+  if (slot.pendingFile) saveSharedFile(slot.pendingFile, SOURCES[slot.key].storageKey);
+  slot.pendingFile = null;
   const tickets = new Map();
   let dataRows = 0;
   for (const [rowNumber, row] of rows.entries()) {
@@ -157,6 +166,26 @@ function analyzeSlot(slot) {
   }
   slot.analysis = { sheetName, dataRows, tickets };
   render();
+}
+
+// true: a maioria das atividades tem data (ONLINE); false: sem data (NÃO AGENDADAS); null: aba vazia.
+function isScheduledSheet(rows) {
+  const dateIndex = columnIndex(COLUMN_DATE);
+  const dataRows = rows.slice(1).filter((row) => row.some((cell) => String(cell).trim()));
+  if (!dataRows.length) return null;
+  const dated = dataRows.filter((row) => /\d/.test(String(row[dateIndex] ?? ""))).length;
+  return dated > dataRows.length / 2;
+}
+
+function rejectWrongSheet(slot) {
+  const { label, scheduled } = SOURCES[slot.key];
+  const other = Object.values(SOURCES).find((source) => source.scheduled !== scheduled);
+  const fileName = slot.fileName;
+  clearSlot(slot);
+  // A chave compartilhada é do Backlog e da Análise de técnicos: só a da própria página é apagada.
+  if (SOURCES[slot.key].storageKey !== SHARED_FILE_KEY) clearSharedFile(SOURCES[slot.key].storageKey);
+  render(`${label}: o arquivo "${fileName}" parece ser a planilha ${other.label.toUpperCase()} `
+    + `(coluna Data ${scheduled ? "sem data" : "com data"}). Anexe-o no campo ${other.label.toUpperCase()}.`);
 }
 
 // Junta as TSKs repetidas das duas planilhas; os dados da ONLINE têm prioridade, mas
@@ -373,6 +402,7 @@ function exportRepeated() {
 function clearSlot(slot, clearFileInput = true) {
   slot.workbook = null;
   slot.analysis = null;
+  slot.pendingFile = null;
   slot.fileName = "";
   slot.meta.classList.add("hidden");
   slot.pickerWrap.classList.add("hidden");

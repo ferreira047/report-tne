@@ -71,7 +71,7 @@ O endereço do Genesis e a porta ficam no topo de `genesis_ne_fora.py`, no proje
 
 ## Chamados Repetidos (`repetidos.html`)
 
-Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de upload, **ONLINE** e **NÃO AGENDADAS** (extrações do TOA, com as mesmas colunas do backlog); dá para anexar só um deles.
+Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de upload, **ONLINE** e **NÃO AGENDADAS** (extrações do TOA, com as mesmas colunas do backlog); dá para anexar só um deles. Há uma trava pela coluna **Data** (T): a ONLINE tem data nas atividades e a NÃO AGENDADAS vem com "-"; um arquivo anexado no campo errado é recusado com aviso e não fica guardado.
 
 - O campo **ONLINE** usa a mesma planilha compartilhada das outras páginas (`app/shared-file.js`): o que foi importado no backlog ou na análise de técnicos já abre ali, e o que é importado ali abre nas outras. A **NÃO AGENDADAS** não vai para as outras páginas, mas também fica guardada na sessão da aba: as duas continuam carregadas ao apertar F5, até usar **Limpar** ou fechar a aba.
 - Só entram as linhas de `Planta Interna - Manutenção Corretiva` (coluna D) com `Repetido` na coluna **Critério** (GD).
