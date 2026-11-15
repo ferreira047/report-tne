@@ -1024,7 +1024,7 @@ function buildBacklogSummary(analysis, neDownCount = null) {
     `Análise de Limpeza de Fila FMMT ${reportType} - ${time}HS`,
     "",
     `✔️ Tickets Analisados: ${analyzedCount}`,
-    `✅ Tickets Normalizados: ${formatCount(analysis.completedCount)}`,
+    `✅ Tickets Normalizados ${formatCount(analysis.completedCount)} - ${formatCount(analysis.commandCenterTotal)} (CCI) // ${formatCount(analysis.technicianQueueTotal)} (CAMPO)`,
     `🚫 Tickets Cancelados: ${formatCount(analysis.cancelledCount)}`,
     `⏸️ Tickets Pendenciados: ${formatCount(analysis.pendingCount)}`,
     `❌ Tickets em falha: ${backlog}`,
