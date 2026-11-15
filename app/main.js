@@ -233,8 +233,8 @@ async function loadFile(file, fromShared = false) {
 
 function classifyBucket(bucket) {
   const normalizedBucket = String(bucket ?? "").trim().toLocaleUpperCase("pt-BR");
-  // Aceita espaço depois do hífen, como em "TLP- T3751680-…" na extração do TOA.
-  return /^TLP-\s*T\d+(?:-|$)/.test(normalizedBucket)
+  // Aceita espaço em volta do hífen, como em "TLP- T3751680-…" ou "TLP-T3758368 - …" na extração do TOA.
+  return /^TLP\s*-\s*T\d+\s*(?:-|$)/.test(normalizedBucket)
     ? "Fila de técnicos"
     : "Command Center";
 }
@@ -1252,7 +1252,7 @@ function exportTechniciansByRegion() {
 
   const techniciansByName = new Map();
   for (const bucket of currentAnalysis.sortedBuckets.filter((item) => item.group === "Fila de técnicos")) {
-    const match = bucket.bucket.trim().match(/^TLP-\s*T?\d+-(.+)$/i);
+    const match = bucket.bucket.trim().match(/^TLP\s*-\s*T?\d+\s*-(.+)$/i);
     const technicianName = match ? match[1].trim() : bucket.bucket.trim();
     const record = techniciansByName.get(technicianName) || {
       technician: technicianName,
