@@ -13,6 +13,9 @@ const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
 const COLUMN_CREATOR_RULE = "DJ";
 const BACKLOG_EXCLUDED_CREATOR_RULE = "DSOC MONITORACAO PREDITIVA";
 const BACKLOG_SCHEDULED_STATUSES = ["Iniciado", "Iniciada", "Não iniciado"];
+// Entrantes: mesmas regras do backlog, mas com as agendadas em qualquer estado (coluna E),
+// e só as TSKs com a Criação do NTT (coluna AS, "dd/mm/aaaa hh:mm:ss") na data de hoje.
+const COLUMN_NTT_CREATED = "AS";
 const STATUS_VALUES = {
   started: "iniciada",
   cancelled: "cancelada",
@@ -460,7 +463,18 @@ function analyzeSelectedSheet() {
   const creatorRuleIndex = columnIndex(COLUMN_CREATOR_RULE);
   const excludedCreatorRule = normalizeText(BACKLOG_EXCLUDED_CREATOR_RULE);
   const backlogStatuses = BACKLOG_SCHEDULED_STATUSES.map(normalizeText);
+  const nttCreatedIndex = columnIndex(COLUMN_NTT_CREATED);
+  const now = new Date();
+  const today = [now.getDate(), now.getMonth() + 1, now.getFullYear()];
+  // Aceita "17/11/2026 08:00:00" e "17/11/26"; compara só dia, mês e ano.
+  const isCreatedToday = (value) => {
+    const match = String(value ?? "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})\b/);
+    if (!match) return false;
+    const year = Number(match[3]) < 100 ? 2000 + Number(match[3]) : Number(match[3]);
+    return Number(match[1]) === today[0] && Number(match[2]) === today[1] && year === today[2];
+  };
   let backlogCount = 0;
+  let entrantsCount = 0;
   const errors = [];
   const warnings = [];
   const sheetLabels = [];
@@ -495,14 +509,17 @@ function analyzeSelectedSheet() {
       warnings.push(`${label}: nenhuma linha do tipo "${TARGET_TYPE}" foi encontrada na aba "${sheetName}".`);
     }
     typeRows = typeRows.concat(slotTypeRows);
-    const backlogRows = scheduled
-      ? slotTypeRows.filter((row) => backlogStatuses.includes(normalizeText(row[statusIndex])))
-      : rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== ""));
-    const keptRows = backlogRows.filter((row) => normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule);
+    // Agendadas: tipo da coluna D; não agendadas: todas as linhas. Nas duas, sem a regra DSOC da coluna DJ.
+    const sourceRows = (scheduled ? slotTypeRows : rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== "")))
+      .filter((row) => normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule);
     // Agendadas: a TSK (coluna B) repetida em mais de uma linha conta uma vez só; linha sem TSK conta sozinha.
-    backlogCount += scheduled
-      ? new Set(keptRows.map((row, rowIndex) => String(row[tskIndex] ?? "").trim() || `linha ${rowIndex}`)).size
-      : keptRows.length;
+    const countTickets = (sourceRowsToCount) => scheduled
+      ? new Set(sourceRowsToCount.map((row) => String(row[tskIndex] ?? "").trim() || row)).size
+      : sourceRowsToCount.length;
+    backlogCount += countTickets(scheduled
+      ? sourceRows.filter((row) => backlogStatuses.includes(normalizeText(row[statusIndex])))
+      : sourceRows);
+    entrantsCount += countTickets(sourceRows.filter((row) => isCreatedToday(row[nttCreatedIndex])));
   }
 
   const hasFiles = Object.values(slots).some((slot) => slot.workbook || slot.error);
@@ -586,6 +603,7 @@ function analyzeSelectedSheet() {
     pendingCount: statusCounts[STATUS_VALUES.pending],
     // Backlog: ONLINE + NÃO AGENDADAS, com as regras descritas em BACKLOG_EXCLUDED_CREATOR_RULE.
     backlogCount,
+    entrantsCount,
     statusCountsByState: Object.fromEntries(Object.entries(statusCountsByState).map(([group, counts]) => [
       group,
       [...counts.entries()]
@@ -599,6 +617,7 @@ function analyzeSelectedSheet() {
   renderAnalysis(currentAnalysis);
   // Preenchido a cada planilha anexada; dá para corrigir à mão antes de copiar o parcial.
   document.getElementById("backlog-input").value = currentAnalysis.backlogCount;
+  document.getElementById("entrants-input").value = currentAnalysis.entrantsCount;
   if (!reportType) {
     warnings.push("Não foi possível identificar FMT, TMG, TNE ou TRJ no nome dos arquivos ou nas abas. A máscara será copiada sem um tipo de relatório.");
   }
