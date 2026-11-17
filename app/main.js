@@ -7,7 +7,7 @@ const COLUMN_CM = "AK";
 const COLUMN_PRIORITY = "GI";
 const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
 // Backlog (calculado em analyzeSelectedSheet):
-// · ONLINE (agendadas): tipo acima (coluna D), estado Iniciado ou Não iniciado (coluna E);
+// · ONLINE (agendadas): tipo acima (coluna D), estado Iniciado ou Não iniciado (coluna E), cada TSK uma vez só;
 // · NÃO AGENDADAS: todas as linhas;
 // nas duas, sem as abertas pela regra abaixo na coluna DJ ("Regra usuário criador").
 const COLUMN_CREATOR_RULE = "DJ";
@@ -498,7 +498,11 @@ function analyzeSelectedSheet() {
     const backlogRows = scheduled
       ? slotTypeRows.filter((row) => backlogStatuses.includes(normalizeText(row[statusIndex])))
       : rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== ""));
-    backlogCount += backlogRows.filter((row) => normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule).length;
+    const keptRows = backlogRows.filter((row) => normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule);
+    // Agendadas: a TSK (coluna B) repetida em mais de uma linha conta uma vez só; linha sem TSK conta sozinha.
+    backlogCount += scheduled
+      ? new Set(keptRows.map((row, rowIndex) => String(row[tskIndex] ?? "").trim() || `linha ${rowIndex}`)).size
+      : keptRows.length;
   }
 
   const hasFiles = Object.values(slots).some((slot) => slot.workbook || slot.error);
