@@ -6,6 +6,9 @@ const COLUMN_STATUS = "E";
 const COLUMN_CM = "AK";
 const COLUMN_PRIORITY = "GI";
 const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
+// Backlog: TSKs em "Não iniciado", menos as abertas por esta regra (coluna DJ).
+const COLUMN_CREATOR_RULE = "DJ";
+const BACKLOG_EXCLUDED_CREATOR_RULE = "Regra usuário criador DSOC MONITORACAO PREDITIVA";
 const STATUS_VALUES = {
   started: "iniciada",
   cancelled: "cancelada",
@@ -516,10 +519,16 @@ function analyzeSelectedSheet() {
   let cancelledCount = 0;
   let completedCount = 0;
   let openCount = 0;
+  let backlogCount = 0;
+  const creatorRuleIndex = columnIndex(COLUMN_CREATOR_RULE);
+  const excludedCreatorRule = normalizeText(BACKLOG_EXCLUDED_CREATOR_RULE);
 
   for (const row of matchingRows) {
     const normalizedStatus = normalizeText(row[statusIndex]);
     const matchingStatus = STATUS_ORDER.find((status) => normalizeText(status) === normalizedStatus);
+    if (matchingStatus === STATUS_VALUES.notStarted && normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule) {
+      backlogCount += 1;
+    }
     if (matchingStatus) {
       statusCounts[matchingStatus] += 1;
     } else {
@@ -565,6 +574,9 @@ function analyzeSelectedSheet() {
     cancelledCount,
     openCount,
     pendingCount: statusCounts[STATUS_VALUES.pending],
+    // Backlog: TSKs de Planta Interna - Manutenção Corretiva em "Não iniciado", somando ONLINE e NÃO AGENDADAS,
+    // sem as da regra DSOC MONITORACAO PREDITIVA (coluna DJ).
+    backlogCount,
     statusCountsByState: Object.fromEntries(Object.entries(statusCountsByState).map(([group, counts]) => [
       group,
       [...counts.entries()]
@@ -576,6 +588,8 @@ function analyzeSelectedSheet() {
     views
   };
   renderAnalysis(currentAnalysis);
+  // Preenchido a cada planilha anexada; dá para corrigir à mão antes de copiar o parcial.
+  document.getElementById("backlog-input").value = currentAnalysis.backlogCount;
   if (!reportType) {
     warnings.push("Não foi possível identificar FMT, TMG, TNE ou TRJ no nome dos arquivos ou nas abas. A máscara será copiada sem um tipo de relatório.");
   }
