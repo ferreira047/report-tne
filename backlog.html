@@ -136,7 +136,31 @@
             <p class="text-xs font-bold uppercase tracking-[0.1em] text-[color:var(--muted)]">Resumo da análise</p>
             <h2 class="mt-1 text-xl font-semibold">Chamados de Planta Interna</h2>
           </div>
-          <p id="analyzed-sheet" class="text-xs text-[color:var(--muted)]"></p>
+          <div class="flex flex-col gap-2 sm:items-end">
+            <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+              <!-- Preenchimento manual de Backlog e Entrantes desativado: os números vêm calculados das planilhas (app/main.js).
+              <label for="backlog-input" title="Calculado das planilhas: ONLINE (Planta Interna - Manutenção Corretiva em Iniciado ou Não iniciado) + NÃO AGENDADAS, sem DSOC MONITORACAO PREDITIVA na coluna DJ." class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                Backlog
+                <input id="backlog-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="w-20 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+              </label>
+              <label for="entrants-input" title="Calculado das planilhas: ONLINE (Planta Interna - Manutenção Corretiva, qualquer estado) + NÃO AGENDADAS, sem DSOC MONITORACAO PREDITIVA na coluna DJ, com Criação do NTT (coluna AS) na data de hoje." class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
+                Entrantes
+                <input id="entrants-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="w-20 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+              </label>
+              -->
+              <button id="copy-summary-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)]">
+                <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><rect x="7" y="6" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 6V4.5A1.5 1.5 0 0011.5 3h-7A1.5 1.5 0 003 4.5v9A1.5 1.5 0 004.5 15H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                Copiar parcial
+              </button>
+              <button id="copy-chart-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">
+                Copiar gráfico
+              </button>
+              <button id="export-technicians-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">
+                Exportar técnicos por região
+              </button>
+            </div>
+            <p id="analyzed-sheet" class="text-xs text-[color:var(--muted)]"></p>
+          </div>
         </div>
 
         <div class="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -344,34 +368,14 @@
           <div id="bucket-chart" class="space-y-3"></div>
         </section>
 
-        <div class="flex flex-col gap-2 border-t border-[color:var(--line)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div class="border-t border-[color:var(--line)] pt-5">
           <p class="text-xs text-[color:var(--muted)]">O arquivo permanece no seu dispositivo; nada é enviado a um servidor.</p>
-          <div class="flex flex-wrap items-center gap-2">
-            <label for="backlog-input" title="Calculado das planilhas: ONLINE (Planta Interna - Manutenção Corretiva em Iniciado ou Não iniciado) + NÃO AGENDADAS, sem DSOC MONITORACAO PREDITIVA na coluna DJ." class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
-              Backlog
-              <input id="backlog-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="w-20 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
-            </label>
-            <label for="entrants-input" title="Calculado das planilhas: ONLINE (Planta Interna - Manutenção Corretiva, qualquer estado) + NÃO AGENDADAS, sem DSOC MONITORACAO PREDITIVA na coluna DJ, com Criação do NTT (coluna AS) na data de hoje." class="flex items-center gap-2 text-xs font-medium text-[color:var(--ink-3)]">
-              Entrantes
-              <input id="entrants-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="w-20 rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-2.5 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
-            </label>
-            <button id="copy-summary-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)]">
-              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><rect x="7" y="6" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 6V4.5A1.5 1.5 0 0011.5 3h-7A1.5 1.5 0 003 4.5v9A1.5 1.5 0 004.5 15H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              Copiar parcial
-            </button>
-            <button id="copy-chart-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">
-              Copiar gráfico
-            </button>
-            <button id="export-technicians-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)]">
-              Exportar técnicos por região
-            </button>
-          </div>
         </div>
       </section>
     </main>
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Report Backlog <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/main.js?v=20261117g"></script>
+  <script src="app/main.js?v=20261117h"></script>
 </body>
 </html>

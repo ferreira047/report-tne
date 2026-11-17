@@ -615,9 +615,10 @@ function analyzeSelectedSheet() {
     views
   };
   renderAnalysis(currentAnalysis);
-  // Preenchido a cada planilha anexada; dá para corrigir à mão antes de copiar o parcial.
-  document.getElementById("backlog-input").value = currentAnalysis.backlogCount;
-  document.getElementById("entrants-input").value = currentAnalysis.entrantsCount;
+  // Preenchimento manual desativado: o parcial usa backlogCount e entrantsCount calculados acima.
+  // Para voltar, descomente os campos em backlog.html e estas linhas.
+  // document.getElementById("backlog-input").value = currentAnalysis.backlogCount;
+  // document.getElementById("entrants-input").value = currentAnalysis.entrantsCount;
   if (!reportType) {
     warnings.push("Não foi possível identificar FMT, TMG, TNE ou TRJ no nome dos arquivos ou nas abas. A máscara será copiada sem um tipo de relatório.");
   }
@@ -1118,15 +1119,16 @@ function buildBacklogSummary(analysis, neDownCount = null) {
   const time = `${String(now.getHours()).padStart(2, "0")}:00`;
   const reportType = analysis.reportType || "Não identificado";
   const formatCount = (count) => count.toLocaleString("pt-BR");
-  const formatOptionalCount = (value) => value === "" ? "" : Number(value).toLocaleString("pt-BR");
-  const backlogValue = document.getElementById("backlog-input").value;
-  const backlogCount = backlogValue === "" ? null : Number(backlogValue);
-  const hasBacklog = Number.isInteger(backlogCount) && backlogCount >= 0;
-  const analyzedCount = hasBacklog
-    ? formatCount(backlogCount + analysis.cancelledCount + analysis.completedCount)
-    : "";
-  const entrants = formatOptionalCount(document.getElementById("entrants-input").value);
-  const backlog = hasBacklog ? formatCount(backlogCount) : "";
+  // Backlog e Entrantes vêm calculados das planilhas (analyzeSelectedSheet).
+  // Versão com os campos manuais de backlog.html, desativada:
+  // const formatOptionalCount = (value) => value === "" ? "" : Number(value).toLocaleString("pt-BR");
+  // const backlogValue = document.getElementById("backlog-input").value;
+  // const backlogCount = backlogValue === "" ? null : Number(backlogValue);
+  // const entrants = formatOptionalCount(document.getElementById("entrants-input").value);
+  const { backlogCount, entrantsCount } = analysis;
+  const analyzedCount = formatCount(backlogCount + analysis.cancelledCount + analysis.completedCount);
+  const entrants = formatCount(entrantsCount);
+  const backlog = formatCount(backlogCount);
 
   const lines = [
     `➡️ Parciais Backlog ${reportType}:`,
@@ -1478,8 +1480,9 @@ function clearAnalysis() {
   clearButton.classList.add("hidden");
   clearButton.classList.remove("inline-flex");
   hideFeedback();
-  document.getElementById("entrants-input").value = "";
-  document.getElementById("backlog-input").value = "";
+  // Campos manuais desativados em backlog.html:
+  // document.getElementById("entrants-input").value = "";
+  // document.getElementById("backlog-input").value = "";
   document.getElementById("technician-sort").value = "most";
   document.getElementById("technician-groups-toggle").setAttribute("aria-pressed", "false");
   document.getElementById("technician-sort-wrap").classList.add("hidden");
