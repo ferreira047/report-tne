@@ -6,9 +6,13 @@ const COLUMN_STATUS = "E";
 const COLUMN_CM = "AK";
 const COLUMN_PRIORITY = "GI";
 const TARGET_TYPE = "Planta Interna - Manutenção Corretiva";
-// Backlog: TSKs em "Não iniciado", menos as abertas por esta regra (coluna DJ).
+// Backlog (calculado em analyzeSelectedSheet):
+// · ONLINE (agendadas): tipo acima (coluna D), estado Iniciado ou Não iniciado (coluna E);
+// · NÃO AGENDADAS: todas as linhas;
+// nas duas, sem as abertas pela regra abaixo na coluna DJ ("Regra usuário criador").
 const COLUMN_CREATOR_RULE = "DJ";
-const BACKLOG_EXCLUDED_CREATOR_RULE = "Regra usuário criador DSOC MONITORACAO PREDITIVA";
+const BACKLOG_EXCLUDED_CREATOR_RULE = "DSOC MONITORACAO PREDITIVA";
+const BACKLOG_SCHEDULED_STATUSES = ["Iniciado", "Iniciada", "Não iniciado"];
 const STATUS_VALUES = {
   started: "iniciada",
   cancelled: "cancelada",
@@ -453,6 +457,10 @@ function analyzeSelectedSheet() {
   const cmIndex = columnIndex(COLUMN_CM);
   const priorityIndex = columnIndex(COLUMN_PRIORITY);
   const targetType = normalizeText(TARGET_TYPE);
+  const creatorRuleIndex = columnIndex(COLUMN_CREATOR_RULE);
+  const excludedCreatorRule = normalizeText(BACKLOG_EXCLUDED_CREATOR_RULE);
+  const backlogStatuses = BACKLOG_SCHEDULED_STATUSES.map(normalizeText);
+  let backlogCount = 0;
   const errors = [];
   const warnings = [];
   const sheetLabels = [];
@@ -487,6 +495,10 @@ function analyzeSelectedSheet() {
       warnings.push(`${label}: nenhuma linha do tipo "${TARGET_TYPE}" foi encontrada na aba "${sheetName}".`);
     }
     typeRows = typeRows.concat(slotTypeRows);
+    const backlogRows = scheduled
+      ? slotTypeRows.filter((row) => backlogStatuses.includes(normalizeText(row[statusIndex])))
+      : rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== ""));
+    backlogCount += backlogRows.filter((row) => normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule).length;
   }
 
   const hasFiles = Object.values(slots).some((slot) => slot.workbook || slot.error);
@@ -519,16 +531,10 @@ function analyzeSelectedSheet() {
   let cancelledCount = 0;
   let completedCount = 0;
   let openCount = 0;
-  let backlogCount = 0;
-  const creatorRuleIndex = columnIndex(COLUMN_CREATOR_RULE);
-  const excludedCreatorRule = normalizeText(BACKLOG_EXCLUDED_CREATOR_RULE);
 
   for (const row of matchingRows) {
     const normalizedStatus = normalizeText(row[statusIndex]);
     const matchingStatus = STATUS_ORDER.find((status) => normalizeText(status) === normalizedStatus);
-    if (matchingStatus === STATUS_VALUES.notStarted && normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule) {
-      backlogCount += 1;
-    }
     if (matchingStatus) {
       statusCounts[matchingStatus] += 1;
     } else {
@@ -574,8 +580,7 @@ function analyzeSelectedSheet() {
     cancelledCount,
     openCount,
     pendingCount: statusCounts[STATUS_VALUES.pending],
-    // Backlog: TSKs de Planta Interna - Manutenção Corretiva em "Não iniciado", somando ONLINE e NÃO AGENDADAS,
-    // sem as da regra DSOC MONITORACAO PREDITIVA (coluna DJ).
+    // Backlog: ONLINE + NÃO AGENDADAS, com as regras descritas em BACKLOG_EXCLUDED_CREATOR_RULE.
     backlogCount,
     statusCountsByState: Object.fromEntries(Object.entries(statusCountsByState).map(([group, counts]) => [
       group,
