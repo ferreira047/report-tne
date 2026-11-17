@@ -19,7 +19,7 @@ const NOT_STARTED_STATUS = "Não iniciado";
 const COLUMN_DATE = "T";
 
 // storageKey: onde a planilha fica guardada na sessão (shared-file.js) para voltar após o F5.
-// A ONLINE usa a chave compartilhada com o Backlog e a Análise de técnicos; a NÃO AGENDADAS, uma só desta página.
+// A ONLINE usa a chave compartilhada com o Backlog e a Análise de técnicos; a NÃO AGENDADAS, a compartilhada com o Backlog.
 // scheduled: se a planilha tem data na coluna Data (COLUMN_DATE); serve para a trava de campo errado.
 const SOURCES = {
   online: { label: "Online", storageKey: SHARED_FILE_KEY, scheduled: true },
@@ -126,7 +126,7 @@ async function loadFile(slot, file, fromShared = false) {
   }
   // Só é guardada na sessão depois de conferir que é a planilha certa (analyzeSlot).
   slot.pendingFile = fromShared ? null : file;
-  const sharedNote = fromShared && SOURCES[slot.key].storageKey === SHARED_FILE_KEY ? " · mesma planilha do Report Backlog" : "";
+  const sharedNote = fromShared ? " · planilha já importada em outra tela" : "";
   slot.meta.textContent = `Arquivo: ${file.name}${sharedNote}`;
   slot.meta.classList.remove("hidden");
   slot.zone.dataset.loaded = "true";
@@ -498,7 +498,7 @@ clearButton.addEventListener("click", () => {
   render();
 });
 
-// Planilhas guardadas na sessão: a ONLINE pode vir do Report Backlog ou da Análise de técnicos.
+// Planilhas guardadas na sessão: a ONLINE pode vir do Report Backlog ou da Análise de técnicos; a NÃO AGENDADAS, do Report Backlog.
 for (const slot of Object.values(slots)) {
   const storedFile = loadSharedFile(SOURCES[slot.key].storageKey);
   if (storedFile) loadFile(slot, storedFile, true);

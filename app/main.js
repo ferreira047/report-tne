@@ -97,17 +97,34 @@ const STATUS_LABELS = {
   [STATUS_VALUES.pending]: "Pendente"
 };
 
-const fileInput = document.getElementById("file-input");
-const dropZone = document.getElementById("drop-zone");
+// Coluna Data: a ONLINE (agendadas) tem data nas atividades; a NÃO AGENDADAS vem com "-".
+// É por ela que a planilha anexada no campo errado é recusada.
+const COLUMN_DATE = "T";
+// storageKey: onde a planilha fica guardada na sessão (shared-file.js) para voltar após o F5.
+// As duas chaves são as mesmas dos Chamados repetidos; a ONLINE também é a da Análise de técnicos.
+// sharedNote: aviso ao lado do nome do arquivo quando ele veio da sessão.
+const SOURCES = {
+  online: { label: "Online", storageKey: SHARED_FILE_KEY, scheduled: true, sharedNote: "planilha já importada em outra tela" },
+  unscheduled: { label: "Não agendadas", storageKey: "reportFilaTecTNE.naoAgendadas", scheduled: false, sharedNote: "planilha já importada nos Chamados repetidos" }
+};
+
 const feedback = document.getElementById("feedback");
-const fileMeta = document.getElementById("file-meta");
-const sheetPickerWrap = document.getElementById("sheet-picker-wrap");
-const sheetPicker = document.getElementById("sheet-picker");
 const results = document.getElementById("results");
 const clearButton = document.getElementById("clear-button");
-let workbook = null;
+// Estado de cada campo de upload (ONLINE e NÃO AGENDADAS).
+const slots = Object.fromEntries(Object.keys(SOURCES).map((key) => [key, {
+  key,
+  input: document.getElementById(`file-input-${key}`),
+  zone: document.getElementById(`drop-zone-${key}`),
+  meta: document.getElementById(`file-meta-${key}`),
+  pickerWrap: document.getElementById(`sheet-picker-wrap-${key}`),
+  picker: document.getElementById(`sheet-picker-${key}`),
+  workbook: null,
+  fileName: "",
+  // Arquivo recém-anexado: só vai para a sessão depois de conferir que é a planilha certa.
+  pendingFile: null
+}]));
 let currentAnalysis = null;
-let selectedFileName = "";
 let technicianSortOrder = "most";
 let currentView = "completed";
 let currentStateGroup = "all";
@@ -189,46 +206,67 @@ function isSupportedFile(file) {
   return /\.(xlsx|xls|csv)$/i.test(file.name);
 }
 
-async function loadFile(file, fromShared = false) {
-  clearAnalysis(false);
-  if (!file) return;
-  selectedFileName = file.name;
-  if (!isSupportedFile(file)) {
-    showFeedback("Arquivo inválido. Selecione uma planilha .xlsx, .xls ou .csv.");
-    return;
-  }
-  if (file.size === 0) {
-    showFeedback("O arquivo está vazio. Selecione uma planilha com dados.");
-    return;
-  }
-  if (!window.XLSX) {
-    showFeedback("Não foi possível carregar o leitor de planilhas. Verifique sua conexão e recarregue a página.");
-    return;
-  }
+// Esvazia um campo de upload; a planilha guardada na sessão só sai quando clearStored é true.
+function clearSlot(slot, clearStored = false) {
+  slot.workbook = null;
+  slot.fileName = "";
+  slot.pendingFile = null;
+  slot.error = "";
+  slot.input.value = "";
+  slot.meta.classList.add("hidden");
+  slot.pickerWrap.classList.add("hidden");
+  delete slot.zone.dataset.loaded;
+  if (clearStored) clearSharedFile(SOURCES[slot.key].storageKey);
+}
 
-  try {
-    const data = await file.arrayBuffer();
-    workbook = XLSX.read(data, { type: "array", cellDates: false });
-    if (!workbook.SheetNames.length) throw new Error("O arquivo não contém abas para leitura.");
-    if (!fromShared) saveSharedFile(file);
-    fileMeta.textContent = `Arquivo: ${file.name}${fromShared ? " · mesma planilha da Análise diária de técnicos" : ""}`;
-    fileMeta.classList.remove("hidden");
-    if (workbook.SheetNames.length > 1) {
-      sheetPicker.replaceChildren(...workbook.SheetNames.map((name) => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        return option;
-      }));
-      // Extração do TOA: abre na aba "Page 1" quando ela existe.
-      sheetPicker.value = workbook.SheetNames.find((name) => normalizeText(name) === "page 1") || workbook.SheetNames[0];
-      sheetPickerWrap.classList.remove("hidden");
+// true: a maioria das atividades tem data (ONLINE); false: sem data (NÃO AGENDADAS); null: aba vazia.
+function isScheduledSheet(rows) {
+  const dateIndex = columnIndex(COLUMN_DATE);
+  const dataRows = rows.slice(1).filter((row) => row.some((cell) => String(cell ?? "").trim()));
+  if (!dataRows.length) return null;
+  const dated = dataRows.filter((row) => /\d/.test(String(row[dateIndex] ?? ""))).length;
+  return dated > dataRows.length / 2;
+}
+
+// fromShared: planilha guardada na sessão (importada antes nesta ou em outra tela).
+async function loadFile(slot, file, fromShared = false) {
+  clearSlot(slot);
+  if (!file) return analyzeSelectedSheet();
+  slot.fileName = file.name;
+  const label = SOURCES[slot.key].label;
+  if (!isSupportedFile(file)) {
+    slot.error = `${label}: arquivo inválido. Selecione uma planilha .xlsx, .xls ou .csv.`;
+  } else if (file.size === 0) {
+    slot.error = `${label}: o arquivo está vazio. Selecione uma planilha com dados.`;
+  } else if (!window.XLSX) {
+    slot.error = "Não foi possível carregar o leitor de planilhas. Verifique sua conexão e recarregue a página.";
+  } else {
+    try {
+      slot.workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false });
+      if (!slot.workbook.SheetNames.length) throw new Error("O arquivo não contém abas para leitura.");
+    } catch (error) {
+      slot.workbook = null;
+      slot.error = `${label}: não foi possível ler o arquivo. Confirme se ele é uma planilha válida. ${error.message || ""}`.trim();
     }
-    analyzeSelectedSheet();
-  } catch (error) {
-    workbook = null;
-    showFeedback(`Não foi possível ler o arquivo. Confirme se ele é uma planilha válida. ${error.message || ""}`.trim());
   }
+  if (!slot.workbook) return analyzeSelectedSheet();
+
+  slot.pendingFile = fromShared ? null : file;
+  slot.meta.textContent = `Arquivo: ${file.name}${fromShared ? ` · ${SOURCES[slot.key].sharedNote}` : ""}`;
+  slot.meta.classList.remove("hidden");
+  slot.zone.dataset.loaded = "true";
+  if (slot.workbook.SheetNames.length > 1) {
+    slot.picker.replaceChildren(...slot.workbook.SheetNames.map((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      return option;
+    }));
+    // Extração do TOA: abre na aba "Page 1" quando ela existe.
+    slot.picker.value = slot.workbook.SheetNames.find((name) => normalizeText(name) === "page 1") || slot.workbook.SheetNames[0];
+    slot.pickerWrap.classList.remove("hidden");
+  }
+  analyzeSelectedSheet();
 }
 
 function classifyBucket(bucket) {
@@ -402,18 +440,9 @@ function buildStatusBreakdown(rows, statusValue, { bucketIndex, statusIndex, cmI
   };
 }
 
+// Soma as linhas das planilhas anexadas (ONLINE e NÃO AGENDADAS); com uma só, analisa apenas ela.
 function analyzeSelectedSheet() {
-  if (!workbook) return;
   hideFeedback();
-  const sheetName = workbook.SheetNames.includes(sheetPicker.value) ? sheetPicker.value : workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false, blankrows: false });
-  if (!rows.length || rows.length < 2) {
-    results.classList.add("hidden");
-    showFeedback("A aba selecionada está vazia ou contém apenas o cabeçalho.");
-    return;
-  }
-
   const bucketIndex = columnIndex(COLUMN_BUCKET);
   const tskIndex = columnIndex(COLUMN_TSK);
   const typeIndex = columnIndex(COLUMN_TYPE);
@@ -421,10 +450,49 @@ function analyzeSelectedSheet() {
   const cmIndex = columnIndex(COLUMN_CM);
   const priorityIndex = columnIndex(COLUMN_PRIORITY);
   const targetType = normalizeText(TARGET_TYPE);
-  const typeRows = rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== "") && normalizeText(row[typeIndex]) === targetType);
+  const errors = [];
+  const warnings = [];
+  const sheetLabels = [];
+  const fileNames = [];
+  let allRows = [];
+  let typeRows = [];
+
+  for (const slot of Object.values(slots)) {
+    if (slot.error) errors.push(slot.error);
+    if (!slot.workbook) continue;
+    const { label, scheduled, storageKey } = SOURCES[slot.key];
+    const sheetName = slot.workbook.SheetNames.includes(slot.picker.value) ? slot.picker.value : slot.workbook.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(slot.workbook.Sheets[sheetName], { header: 1, defval: "", raw: false, blankrows: false });
+    if (isScheduledSheet(rows) === !scheduled) {
+      const other = Object.values(SOURCES).find((source) => source.scheduled !== scheduled);
+      const fileName = slot.fileName;
+      // A chave da ONLINE também é da Análise de técnicos: a planilha guardada lá não é apagada.
+      clearSlot(slot, storageKey !== SHARED_FILE_KEY);
+      errors.push(`${label}: o arquivo "${fileName}" parece ser a planilha ${other.label.toUpperCase()} `
+        + `(coluna Data ${scheduled ? "sem data" : "com data"}). Anexe-o no campo ${other.label.toUpperCase()}.`);
+      continue;
+    }
+    if (slot.pendingFile) saveSharedFile(slot.pendingFile, storageKey);
+    slot.pendingFile = null;
+    fileNames.push(slot.fileName);
+    sheetLabels.push(`${label}: aba ${sheetName}`);
+    allRows = allRows.concat(rows);
+    const slotTypeRows = rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== "") && normalizeText(row[typeIndex]) === targetType);
+    if (rows.length < 2) {
+      warnings.push(`${label}: a aba "${sheetName}" está vazia ou contém apenas o cabeçalho.`);
+    } else if (!slotTypeRows.length) {
+      warnings.push(`${label}: nenhuma linha do tipo "${TARGET_TYPE}" foi encontrada na aba "${sheetName}".`);
+    }
+    typeRows = typeRows.concat(slotTypeRows);
+  }
+
+  const hasFiles = Object.values(slots).some((slot) => slot.workbook || slot.error);
+  clearButton.classList.toggle("hidden", !hasFiles);
+  clearButton.classList.toggle("inline-flex", hasFiles);
   if (!typeRows.length) {
+    currentAnalysis = null;
     results.classList.add("hidden");
-    showFeedback(`Nenhuma linha do tipo "${TARGET_TYPE}" foi encontrada na aba "${sheetName}".`);
+    if (errors.length || warnings.length) showFeedback([...errors, ...warnings].join(" "));
     return;
   }
 
@@ -440,7 +508,7 @@ function analyzeSelectedSheet() {
   const matchingRows = typeRows.filter((row) => !(normalizeText(row[statusIndex]) === completedStatus && repeatedCompletedTsks.has(String(row[tskIndex] ?? "").trim())));
   const excludedCompletedCount = typeRows.length - matchingRows.length;
 
-  const reportType = detectReportType(rows, selectedFileName);
+  const reportType = detectReportType(allRows, fileNames.join(" "));
   const statusCounts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
   const unknownStatuses = new Map();
   const createStateCounts = () => new Map([...TECHNICIAN_LOCATION_ORDER, "Outros"].map((location) => [location, { completed: 0, cancelled: 0, pending: 0 }]));
@@ -490,7 +558,7 @@ function analyzeSelectedSheet() {
   // Os campos de "completed" ficam também na raiz: o parcial e a exportação usam sempre as encerradas.
   currentAnalysis = {
     ...views.completed,
-    sheetName,
+    sheetName: sheetLabels.join(" · "),
     reportType,
     total: matchingRows.length,
     completedCount,
@@ -508,9 +576,8 @@ function analyzeSelectedSheet() {
     views
   };
   renderAnalysis(currentAnalysis);
-  const warnings = [];
   if (!reportType) {
-    warnings.push(`Não foi possível identificar FMT, TMG, TNE ou TRJ no nome do arquivo ou na aba "${sheetName}". A máscara será copiada sem um tipo de relatório.`);
+    warnings.push("Não foi possível identificar FMT, TMG, TNE ou TRJ no nome dos arquivos ou nas abas. A máscara será copiada sem um tipo de relatório.");
   }
   if (repeatedCompletedTsks.size) {
     const details = [...repeatedCompletedTsks.entries()].map(([tsk, count]) => `${tsk} (${count}x)`).join(", ");
@@ -520,7 +587,8 @@ function analyzeSelectedSheet() {
     const details = [...unknownStatuses.entries()].map(([status, count]) => `"${status}" (${count})`).join(", ");
     warnings.push(`Foram encontrados status fora das cinco opções esperadas: ${details}. Essas linhas aparecem no total, mas não entram nos grupos de encerrada, cancelada ou em aberto.`);
   }
-  if (warnings.length) showFeedback(warnings.join(" "), "warning");
+  if (errors.length) showFeedback([...errors, ...warnings].join(" "));
+  else if (warnings.length) showFeedback(warnings.join(" "), "warning");
 }
 
 function detectReportType(rows, fileName) {
@@ -810,7 +878,7 @@ function renderAnalysis(fullAnalysis) {
   document.getElementById("cancelled-count").textContent = analysis.cancelledCount.toLocaleString("pt-BR");
   document.getElementById("pending-count").textContent = analysis.pendingCount.toLocaleString("pt-BR");
   renderStatusCountsByState(analysis);
-  document.getElementById("analyzed-sheet").textContent = `Aba: ${analysis.sheetName}`;
+  document.getElementById("analyzed-sheet").textContent = analysis.sheetName;
 
   for (const priority of ["P1", "P2", "P3", "P4", "P5"]) {
     document.getElementById(`priority-${priority.toLowerCase()}`).textContent = analysis.priorityCounts[priority].toLocaleString("pt-BR");
@@ -1358,14 +1426,13 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
-function clearAnalysis(clearFileInput = true) {
-  workbook = null;
+// Botão Limpar: tira as duas planilhas (também da sessão) e volta a tela ao início.
+function clearAnalysis() {
+  for (const slot of Object.values(slots)) clearSlot(slot, true);
   currentAnalysis = null;
   currentStateGroup = "all";
   setView("completed");
   results.classList.add("hidden");
-  sheetPickerWrap.classList.add("hidden");
-  fileMeta.classList.add("hidden");
   clearButton.classList.add("hidden");
   clearButton.classList.remove("inline-flex");
   hideFeedback();
@@ -1382,15 +1449,29 @@ function clearAnalysis(clearFileInput = true) {
   for (const priority of ["P1", "P2", "P3", "P4", "P5"]) {
     document.getElementById(`priority-${priority.toLowerCase()}`).textContent = "0";
   }
-  if (clearFileInput) {
-    fileInput.value = "";
-    selectedFileName = "";
-    clearSharedFile();
-  }
 }
 
-fileInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
-sheetPicker.addEventListener("change", analyzeSelectedSheet);
+for (const slot of Object.values(slots)) {
+  slot.input.addEventListener("change", (event) => loadFile(slot, event.target.files[0]));
+  slot.picker.addEventListener("change", analyzeSelectedSheet);
+  slot.zone.addEventListener("click", () => slot.input.click());
+  slot.zone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      slot.input.click();
+    }
+  });
+  slot.zone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    slot.zone.classList.add("is-dragging");
+  });
+  slot.zone.addEventListener("dragleave", () => slot.zone.classList.remove("is-dragging"));
+  slot.zone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    slot.zone.classList.remove("is-dragging");
+    loadFile(slot, event.dataTransfer.files[0]);
+  });
+}
 document.getElementById("technician-sort").addEventListener("change", () => {
   if (currentAnalysis) renderTechnicianClosures(currentAnalysis);
 });
@@ -1422,24 +1503,9 @@ fetchGenesisNeDownCount();
 document.getElementById("copy-chart-button").addEventListener("click", copyGroupShareImage);
 document.getElementById("export-technicians-button").addEventListener("click", exportTechniciansByRegion);
 clearButton.addEventListener("click", () => clearAnalysis());
-dropZone.addEventListener("click", () => fileInput.click());
-dropZone.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    fileInput.click();
-  }
-});
-dropZone.addEventListener("dragover", (event) => {
-  event.preventDefault();
-  dropZone.classList.add("is-dragging");
-});
-dropZone.addEventListener("dragleave", () => dropZone.classList.remove("is-dragging"));
-dropZone.addEventListener("drop", (event) => {
-  event.preventDefault();
-  dropZone.classList.remove("is-dragging");
-  loadFile(event.dataTransfer.files[0]);
-});
-
-// Planilha importada na Análise diária de técnicos (mesma aba do navegador).
-const sharedFile = loadSharedFile();
-if (sharedFile) loadFile(sharedFile, true);
+// Planilhas guardadas na sessão: a ONLINE pode vir da Análise de técnicos ou dos Chamados repetidos;
+// a NÃO AGENDADAS, dos Chamados repetidos.
+for (const slot of Object.values(slots)) {
+  const storedFile = loadSharedFile(SOURCES[slot.key].storageKey);
+  if (storedFile) loadFile(slot, storedFile, true);
+}
