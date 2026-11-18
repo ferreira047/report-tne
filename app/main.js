@@ -477,6 +477,8 @@ function analyzeSelectedSheet() {
   let entrantsCount = 0;
   // Mesmos números separados por planilha, para o quadro "Backlog e entrantes".
   const backlogBySource = { online: 0, unscheduled: 0 };
+  // Linhas da ONLINE: o quadro "Contagem por status" mostra só as agendadas.
+  const scheduledRows = new Set();
   const entrantsBySource = { online: 0, unscheduled: 0 };
   const errors = [];
   const warnings = [];
@@ -512,6 +514,7 @@ function analyzeSelectedSheet() {
       warnings.push(`${label}: nenhuma linha do tipo "${TARGET_TYPE}" foi encontrada na aba "${sheetName}".`);
     }
     typeRows = typeRows.concat(slotTypeRows);
+    if (scheduled) slotTypeRows.forEach((row) => scheduledRows.add(row));
     // Agendadas: tipo da coluna D; não agendadas: todas as linhas. Nas duas, sem a regra DSOC da coluna DJ.
     const sourceRows = (scheduled ? slotTypeRows : rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim() !== "")))
       .filter((row) => normalizeText(row[creatorRuleIndex]) !== excludedCreatorRule);
@@ -551,6 +554,9 @@ function analyzeSelectedSheet() {
 
   const reportType = detectReportType(allRows, fileNames.join(" "));
   const statusCounts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
+  const scheduledStatusCounts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
+  // A extração do TOA traz "Iniciado"; no quadro de status ele conta como Iniciada.
+  const startedAliases = [STATUS_VALUES.started, "Iniciado"].map(normalizeText);
   const unknownStatuses = new Map();
   const createStateCounts = () => new Map([...TECHNICIAN_LOCATION_ORDER, "Outros"].map((location) => [location, { completed: 0, cancelled: 0, pending: 0 }]));
   const statusCountsByState = { all: createStateCounts(), technician: createStateCounts(), commandCenter: createStateCounts() };
@@ -561,6 +567,10 @@ function analyzeSelectedSheet() {
   for (const row of matchingRows) {
     const normalizedStatus = normalizeText(row[statusIndex]);
     const matchingStatus = STATUS_ORDER.find((status) => normalizeText(status) === normalizedStatus);
+    if (scheduledRows.has(row)) {
+      const scheduledStatus = startedAliases.includes(normalizedStatus) ? STATUS_VALUES.started : matchingStatus;
+      if (scheduledStatus) scheduledStatusCounts[scheduledStatus] += 1;
+    }
     if (matchingStatus) {
       statusCounts[matchingStatus] += 1;
     } else {
@@ -618,6 +628,7 @@ function analyzeSelectedSheet() {
         .filter(({ completed, cancelled, pending }) => completed || cancelled || pending)
     ])),
     statusCounts,
+    scheduledStatusCounts,
     unknownStatuses,
     views
   };
@@ -974,7 +985,7 @@ function renderAnalysis(fullAnalysis) {
     label.textContent = STATUS_LABELS[status];
     const count = document.createElement("span");
     count.className = "tabular font-semibold text-[color:var(--ink)]";
-    count.textContent = analysis.statusCounts[status].toLocaleString("pt-BR");
+    count.textContent = analysis.scheduledStatusCounts[status].toLocaleString("pt-BR");
     row.append(label, count);
     statusRows.append(row);
   }
