@@ -149,7 +149,7 @@
           <p class="text-xs text-[color:var(--muted)] sm:ml-auto">O 2G fica sempre fora do report.</p>
         </section>
 
-        <div id="summary-cards" class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"></div>
+        <div id="summary-cards" class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7"></div>
 
         <div id="unassigned-box" data-empty="false" role="status" class="mb-7 flex flex-col gap-3 rounded-md border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p><strong id="unassigned-count" class="font-semibold">0 linha(s) sem responsável</strong> <span class="opacity-80">· não entram nas tabelas até serem classificadas na tabela de detalhes.</span></p>
@@ -159,7 +159,7 @@
         <section class="panel mb-5 overflow-hidden rounded-md" aria-labelledby="general-title">
           <div class="px-5 pb-3 pt-5">
             <h3 id="general-title" class="font-semibold">Responsável × Aging · TNE geral</h3>
-            <p class="mt-1 text-xs text-[color:var(--muted)]">Contagem de sites (linhas) por responsável e faixa de dias desde o horário do evento. Sem responsável e TLP ficam fora.</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Contagem de sites (linhas) por responsável e faixa de dias desde o horário do evento. Linhas sem responsável ficam fora.</p>
           </div>
           <div id="general-table" class="overflow-x-auto"></div>
         </section>
@@ -225,6 +225,6 @@
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Report Genesis <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/genesis.js?v=20261118b"></script>
+  <script src="app/genesis.js?v=20261118c"></script>
 </body>
 </html>

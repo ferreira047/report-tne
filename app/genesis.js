@@ -46,10 +46,11 @@ const REGIONS = {
   "TNE 2": ["CE", "PB", "PE", "RN"]
 };
 
-// Responsáveis que entram no report, nesta ordem. Vazio e TLP ficam fora das tabelas.
-const REPORT_RESPONSIBLES = ["EM ANALISE", "IMPLANTAÇÃO", "PROVEDOR", "REGIONAL"];
+// Responsáveis que entram no report, nesta ordem. Linhas sem responsável ficam fora das tabelas.
+// A TLP entra como mais uma linha (na planilha antiga ela ficava fora das tabelas dinâmicas).
+const REPORT_RESPONSIBLES = ["EM ANALISE", "IMPLANTAÇÃO", "PROVEDOR", "REGIONAL", "TLP"];
 const PROVIDER_RESPONSIBLE = "PROVEDOR";
-const EXTRA_RESPONSIBLE_OPTIONS = ["TLP"];
+const EXTRA_RESPONSIBLE_OPTIONS = [];
 // Quando o arquivo não traz a coluna RESPONSAVEL (ex.: painel_online.csv baixado do Genesis),
 // o responsável vem primeiro da etiqueta que a equipe escreve no início da coluna "detalhe"
 // (ex.: "*TLP* Téc acionado…", "*PROVEDOR* …", "13/11 02:41 - *IMP* - …"): é o mesmo critério
@@ -514,7 +515,7 @@ function renderPivotTable(container, pivot, firstColumnLabel, emptyMessage) {
 
 function renderCards(view) {
   const cards = [
-    { label: "Total no report", value: view.general.total.total, note: "Sites dos 4 responsáveis", tone: "var(--blue)" },
+    { label: "Total no report", value: view.general.total.total, note: `Sites dos ${REPORT_RESPONSIBLES.length} responsáveis`, tone: "var(--blue)" },
     ...view.general.rows.map(([responsible, counts]) => ({
       label: responsible,
       value: counts.total,
