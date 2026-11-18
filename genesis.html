@@ -79,7 +79,7 @@
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 id="upload-title" class="text-lg font-semibold">Importar extração do Genesis</h2>
-            <p class="mt-1 text-sm text-[color:var(--muted)]">Arraste o painel_online.csv baixado do Genesis (Painel Online TNE) e o painel é montado na hora. O responsável vem da etiqueta no início do detalhe (*TLP*, *PROVEDOR*, *REGIONAL*, *IMP*); sem etiqueta, da causa. Se o arquivo tiver a coluna RESPONSAVEL, ela é usada.</p>
+            <p class="mt-1 text-sm text-[color:var(--muted)]">Arraste o painel_online.csv baixado do Genesis (Painel Online TNE) e o painel é montado na hora. Detalhe (coluna W) vazio = EM ANALISE; nos demais, o responsável vem da etiqueta no início do detalhe (*TLP*, *PROVEDOR*, *REGIONAL*, *IMP*) e, sem etiqueta, da causa. Se o arquivo tiver a coluna RESPONSAVEL, ela é usada.</p>
           </div>
           <button id="clear-button" type="button" class="hidden items-center gap-2 self-start rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] sm:self-auto">
             <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M4 5h12M8 5V3.5h4V5m-6.5 0 .7 11h7.6l.7-11M8.5 8v5m3-5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -225,6 +225,6 @@
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Report Genesis <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/genesis.js?v=20261118c"></script>
+  <script src="app/genesis.js?v=20261118d"></script>
 </body>
 </html>

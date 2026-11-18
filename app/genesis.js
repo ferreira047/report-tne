@@ -56,6 +56,9 @@ const EXTRA_RESPONSIBLE_OPTIONS = [];
 // (ex.: "*TLP* Téc acionado…", "*PROVEDOR* …", "13/11 02:41 - *IMP* - …"): é o mesmo critério
 // usado para preencher o RESPONSAVEL à mão na planilha antiga. A primeira etiqueta do texto vale.
 const COLUMN_DETAIL = "detalhe";
+// Coluna W do painel_online.csv: texto completo do detalhe. Vazia = ninguém tratou ainda → EM ANALISE.
+const COLUMN_DETAIL_TOOLTIP = "detalhe_tooltip";
+const EMPTY_DETAIL_RESPONSIBLE = "EM ANALISE";
 const DETAIL_TAGS = {
   TLP: "TLP",
   REGIONAL: "REGIONAL",
@@ -232,7 +235,9 @@ function detailTag(detail) {
 }
 
 // Retorna { responsible, source }: source = "detalhe", "causa" ou "" (sem sugestão).
-function suggestResponsible(detail, cause) {
+// detailTooltip = null quando o arquivo não tem a coluna detalhe_tooltip (a regra da coluna W não se aplica).
+function suggestResponsible(detail, cause, detailTooltip = null) {
+  if (detailTooltip !== null && !detailTooltip) return { responsible: EMPTY_DETAIL_RESPONSIBLE, source: "detalhe-vazio" };
   const tagged = detailTag(detail);
   if (tagged) return { responsible: tagged, source: "detalhe" };
   const key = normalizeText(cause);
@@ -342,6 +347,7 @@ function analyzeSheet() {
   const responsibleIndex = findColumn(COLUMN_RESPONSIBLE);
   const hasResponsibleColumn = responsibleIndex >= 0;
   const detailIndex = findColumn(COLUMN_DETAIL);
+  const detailTooltipIndex = findColumn(COLUMN_DETAIL_TOOLTIP);
   if (pendingFile) saveSharedFile(pendingFile, GENESIS_FILE_KEY);
   pendingFile = null;
 
@@ -370,14 +376,15 @@ function analyzeSheet() {
       eveCrqLink: text(row, "eveCrqLink"),
       status: text(row, "status"),
       regional: text(row, "regional"),
-      detail: detailIndex >= 0 ? cleanText(row[detailIndex]).replace(/_x000D_/gi, " ") : ""
+      detail: detailIndex >= 0 ? cleanText(row[detailIndex]).replace(/_x000D_/gi, " ") : "",
+      detailTooltip: detailTooltipIndex >= 0 ? cleanText(row[detailTooltipIndex]) : null
     };
     record.key = `${record.eveCrq}|${record.site}`;
     if (hasResponsibleColumn) {
       record.baseResponsible = canonicalResponsible(row[responsibleIndex]);
       record.responsibleSource = "arquivo";
     } else {
-      const suggestion = suggestResponsible(record.detail, record.cause);
+      const suggestion = suggestResponsible(record.detail, record.cause, record.detailTooltip);
       record.baseResponsible = suggestion.responsible;
       record.responsibleSource = suggestion.source;
     }
@@ -608,7 +615,7 @@ function responsibleSelect(record) {
 }
 
 // De onde veio o responsável sugerido (aparece embaixo do seletor).
-const SOURCE_NOTES = { detalhe: "pela etiqueta do detalhe", causa: "pela causa" };
+const SOURCE_NOTES = { "detalhe-vazio": "detalhe (coluna W) vazio", detalhe: "pela etiqueta do detalhe", causa: "pela causa" };
 
 // Causa e, embaixo, o começo do detalhe (onde fica a etiqueta *TLP*, *PROVEDOR*…); o texto inteiro fica no title.
 function causeCell(record) {
@@ -704,7 +711,7 @@ function render(errorMessage = "") {
   if (!errorMessage) {
     const source = dataset.hasResponsibleColumn
       ? "responsável lido da coluna RESPONSAVEL"
-      : "responsável pela etiqueta do detalhe (*TLP*, *PROVEDOR*…) e, sem etiqueta, pela causa";
+      : "detalhe (coluna W) vazio = EM ANALISE; nos demais, responsável pela etiqueta do detalhe (*TLP*, *PROVEDOR*…) e, sem etiqueta, pela causa";
     const invalid = dataset.invalidDates ? ` ${dataset.invalidDates} linha(s) com horário inválido ficaram de fora.` : "";
     showFeedback(`${formatCount(dataset.records.length)} linha(s) com horário na aba "${dataset.sheetName}"; ${source}.${invalid}`, dataset.invalidDates ? "error" : "ok");
   }
