@@ -79,7 +79,7 @@
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 id="upload-title" class="text-lg font-semibold">Importar extração do Genesis</h2>
-            <p class="mt-1 text-sm text-[color:var(--muted)]">Anexe a extração do Painel Online TNE. O cabeçalho é encontrado pela coluna "horario", em qualquer linha. Se o arquivo tiver a coluna RESPONSAVEL, ela é usada; se não, o responsável é sugerido pela causa.</p>
+            <p class="mt-1 text-sm text-[color:var(--muted)]">Arraste o painel_online.csv baixado do Genesis (Painel Online TNE) e o painel é montado na hora. O responsável vem da etiqueta no início do detalhe (*TLP*, *PROVEDOR*, *REGIONAL*, *IMP*); sem etiqueta, da causa. Se o arquivo tiver a coluna RESPONSAVEL, ela é usada.</p>
           </div>
           <button id="clear-button" type="button" class="hidden items-center gap-2 self-start rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] sm:self-auto">
             <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M4 5h12M8 5V3.5h4V5m-6.5 0 .7 11h7.6l.7-11M8.5 8v5m3-5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -93,7 +93,7 @@
             <span class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)]">
               <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 002 2h10a2 2 0 002-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
-            <p class="text-sm font-semibold text-[color:var(--ink-2)]">Arraste a extração do Genesis aqui</p>
+            <p class="text-sm font-semibold text-[color:var(--ink-2)]">Arraste o painel_online.csv aqui</p>
             <p class="mt-1 text-xs text-[color:var(--muted)]">ou clique para escolher · .xlsx, .xlsm, .xls e .csv</p>
           </div>
         </div>
@@ -225,6 +225,6 @@
     <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Report Genesis <span aria-hidden="true">·</span> leitura e processamento locais</footer>
   </div>
 
-  <script src="app/genesis.js?v=20261118a"></script>
+  <script src="app/genesis.js?v=20261118b"></script>
 </body>
 </html>

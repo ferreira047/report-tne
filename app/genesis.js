@@ -50,8 +50,20 @@ const REGIONS = {
 const REPORT_RESPONSIBLES = ["EM ANALISE", "IMPLANTAÇÃO", "PROVEDOR", "REGIONAL"];
 const PROVIDER_RESPONSIBLE = "PROVEDOR";
 const EXTRA_RESPONSIBLE_OPTIONS = ["TLP"];
-// Sugestão de responsável pela causa quando o arquivo não traz a coluna RESPONSAVEL.
-// Vale a primeira regra que bater; sem regra, a linha fica sem responsável para classificar.
+// Quando o arquivo não traz a coluna RESPONSAVEL (ex.: painel_online.csv baixado do Genesis),
+// o responsável vem primeiro da etiqueta que a equipe escreve no início da coluna "detalhe"
+// (ex.: "*TLP* Téc acionado…", "*PROVEDOR* …", "13/11 02:41 - *IMP* - …"): é o mesmo critério
+// usado para preencher o RESPONSAVEL à mão na planilha antiga. A primeira etiqueta do texto vale.
+const COLUMN_DETAIL = "detalhe";
+const DETAIL_TAGS = {
+  TLP: "TLP",
+  REGIONAL: "REGIONAL",
+  PROVEDOR: "PROVEDOR",
+  IMPLANTACAO: "IMPLANTAÇÃO",
+  IMP: "IMPLANTAÇÃO"
+};
+// Sem etiqueta no detalhe, vale a primeira regra da causa que bater; sem regra, a linha fica
+// sem responsável para classificar.
 //   emptyCause: causa vazia ou só " / "
 //   startsWith / contains: comparação sem diferenciar maiúsculas e acentos
 const RESPONSIBLE_RULES = [
@@ -142,15 +154,23 @@ function excelSerialToDate(serial) {
   return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), utc.getUTCHours(), utc.getUTCMinutes(), utc.getUTCSeconds());
 }
 
-// Aceita serial do Excel, Date, "dd/mm/aaaa hh:mm[:ss]" e "aaaa-mm-dd hh:mm[:ss]".
-function parseDateTime(value) {
+// Aceita serial do Excel, Date, "dd/mm/aaaa hh:mm[:ss]", "dd/mm hh:mm" (sem ano, como vem
+// no painel_online.csv) e "aaaa-mm-dd hh:mm[:ss]".
+function parseDateTime(value, now = new Date()) {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   if (typeof value === "number") return Number.isFinite(value) && value > 0 ? excelSerialToDate(value) : null;
   const text = cleanText(value);
   if (!text) return null;
-  let match = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(text);
+  let match = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(text);
   if (match) {
     const [, day, month, year, hours = 0, minutes = 0, seconds = 0] = match;
+    if (!year) {
+      // Sem ano: o ano atual, como o Excel faz ao colar; se a data cairia mais de um dia
+      // no futuro (ex.: 28/12 lido em janeiro), é do ano anterior.
+      const date = validDate(new Date(now.getFullYear(), month - 1, day, hours, minutes, seconds), Number(day), Number(month));
+      if (date && date.getTime() - now.getTime() > DAY_MS) date.setFullYear(now.getFullYear() - 1);
+      return date;
+    }
     const fullYear = year.length === 2 ? 2000 + Number(year) : Number(year);
     return validDate(new Date(fullYear, month - 1, day, hours, minutes, seconds), Number(day), Number(month));
   }
@@ -197,14 +217,32 @@ function canonicalResponsible(value) {
   return RESPONSIBLE_OPTIONS.find((option) => normalizeText(option) === key) || cleanText(value).toLocaleUpperCase("pt-BR");
 }
 
-function suggestResponsible(cause) {
+// Etiqueta "*TAG*" no detalhe; aceita também "TAG*" no começo (asterisco inicial esquecido).
+// A ordem das alternativas põe IMPLANTACAO antes de IMP.
+const DETAIL_TAG_PATTERN = new RegExp(
+  `(?:^|[^a-z0-9])\\*?\\s*(${Object.keys(DETAIL_TAGS).sort((a, b) => b.length - a.length).join("|")})\\s*\\*`,
+  "i"
+);
+
+// O detalhe é comparado sem acentos ("*IMPLANTAÇÃO*" bate com IMPLANTACAO).
+function detailTag(detail) {
+  const match = DETAIL_TAG_PATTERN.exec(normalizeText(detail));
+  return match ? DETAIL_TAGS[match[1].toUpperCase()] : "";
+}
+
+// Retorna { responsible, source }: source = "detalhe", "causa" ou "" (sem sugestão).
+function suggestResponsible(detail, cause) {
+  const tagged = detailTag(detail);
+  if (tagged) return { responsible: tagged, source: "detalhe" };
   const key = normalizeText(cause);
   for (const rule of RESPONSIBLE_RULES) {
-    if (rule.emptyCause && !key.replace(/[\s/]/g, "")) return rule.responsible;
-    if (rule.startsWith?.some((prefix) => key.startsWith(normalizeText(prefix)))) return rule.responsible;
-    if (rule.contains?.some((part) => key.includes(normalizeText(part)))) return rule.responsible;
+    if ((rule.emptyCause && !key.replace(/[\s/]/g, ""))
+      || rule.startsWith?.some((prefix) => key.startsWith(normalizeText(prefix)))
+      || rule.contains?.some((part) => key.includes(normalizeText(part)))) {
+      return { responsible: rule.responsible, source: "causa" };
+    }
   }
-  return "";
+  return { responsible: "", source: "" };
 }
 
 function recordResponsible(record) {
@@ -302,6 +340,7 @@ function analyzeSheet() {
   }
   const responsibleIndex = findColumn(COLUMN_RESPONSIBLE);
   const hasResponsibleColumn = responsibleIndex >= 0;
+  const detailIndex = findColumn(COLUMN_DETAIL);
   if (pendingFile) saveSharedFile(pendingFile, GENESIS_FILE_KEY);
   pendingFile = null;
 
@@ -329,10 +368,18 @@ function analyzeSheet() {
       eveCrq: text(row, "eveCrq"),
       eveCrqLink: text(row, "eveCrqLink"),
       status: text(row, "status"),
-      regional: text(row, "regional")
+      regional: text(row, "regional"),
+      detail: detailIndex >= 0 ? cleanText(row[detailIndex]).replace(/_x000D_/gi, " ") : ""
     };
     record.key = `${record.eveCrq}|${record.site}`;
-    record.baseResponsible = hasResponsibleColumn ? canonicalResponsible(row[responsibleIndex]) : suggestResponsible(record.cause);
+    if (hasResponsibleColumn) {
+      record.baseResponsible = canonicalResponsible(row[responsibleIndex]);
+      record.responsibleSource = "arquivo";
+    } else {
+      const suggestion = suggestResponsible(record.detail, record.cause);
+      record.baseResponsible = suggestion.responsible;
+      record.responsibleSource = suggestion.source;
+    }
     records.push(record);
   }
   dataset = { sheetName, header, records, hasResponsibleColumn, invalidDates };
@@ -559,6 +606,20 @@ function responsibleSelect(record) {
   return select;
 }
 
+// De onde veio o responsável sugerido (aparece embaixo do seletor).
+const SOURCE_NOTES = { detalhe: "pela etiqueta do detalhe", causa: "pela causa" };
+
+// Causa e, embaixo, o começo do detalhe (onde fica a etiqueta *TLP*, *PROVEDOR*…); o texto inteiro fica no title.
+function causeCell(record) {
+  const td = cell("td", record.cause || "—", "min-w-[240px] max-w-[360px] px-4 py-2.5 text-[color:var(--ink-3)]");
+  if (record.detail && record.detail !== "#") {
+    const detail = cell("span", record.detail.length > 90 ? `${record.detail.slice(0, 90)}…` : record.detail, "mt-1 block text-[11px] leading-4 text-[color:var(--muted)]");
+    detail.title = record.detail;
+    td.append(detail);
+  }
+  return td;
+}
+
 function renderDetails(view) {
   const records = (filters.onlyUnassigned ? view.unassigned : view.scoped)
     .slice()
@@ -578,7 +639,9 @@ function renderDetails(view) {
     selectCell.className = "px-4 py-2";
     selectCell.append(responsibleSelect(record));
     if (edited) selectCell.append(cell("span", "editado nesta sessão", "mt-1 block text-[10px] text-[color:var(--muted)]"));
-    else if (!dataset.hasResponsibleColumn && record.baseResponsible) selectCell.append(cell("span", "sugerido pela causa", "mt-1 block text-[10px] text-[color:var(--muted)]"));
+    else if (SOURCE_NOTES[record.responsibleSource]) {
+      selectCell.append(cell("span", SOURCE_NOTES[record.responsibleSource], "mt-1 block text-[10px] text-[color:var(--muted)]"));
+    }
     row.append(
       cell("td", formatDateTime(record.horario), "tabular whitespace-nowrap px-4 py-2.5 text-[color:var(--ink-3)]"),
       cell("td", record.aging, `whitespace-nowrap px-4 py-2.5 font-semibold ${AGING_TONES[record.aging]}`),
@@ -586,7 +649,7 @@ function renderDetails(view) {
       cell("td", record.technologyFilter, "px-4 py-2.5 text-[color:var(--ink-3)]"),
       cell("td", [record.uf, record.region].filter(Boolean).join(" · ") || "—", "whitespace-nowrap px-4 py-2.5 text-[color:var(--ink-3)]"),
       cell("td", record.anf || "—", "tabular px-4 py-2.5 text-[color:var(--ink-3)]"),
-      cell("td", record.cause || "—", "min-w-[220px] px-4 py-2.5 text-[color:var(--ink-3)]"),
+      causeCell(record),
       eveCrqCell(record),
       selectCell
     );
@@ -640,7 +703,7 @@ function render(errorMessage = "") {
   if (!errorMessage) {
     const source = dataset.hasResponsibleColumn
       ? "responsável lido da coluna RESPONSAVEL"
-      : "responsável sugerido pela causa (sem coluna RESPONSAVEL no arquivo)";
+      : "responsável pela etiqueta do detalhe (*TLP*, *PROVEDOR*…) e, sem etiqueta, pela causa";
     const invalid = dataset.invalidDates ? ` ${dataset.invalidDates} linha(s) com horário inválido ficaram de fora.` : "";
     showFeedback(`${formatCount(dataset.records.length)} linha(s) com horário na aba "${dataset.sheetName}"; ${source}.${invalid}`, dataset.invalidDates ? "error" : "ok");
   }
