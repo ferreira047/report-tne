@@ -475,6 +475,9 @@ function analyzeSelectedSheet() {
   };
   let backlogCount = 0;
   let entrantsCount = 0;
+  // Mesmos números separados por planilha, para o quadro "Backlog e entrantes".
+  const backlogBySource = { online: 0, unscheduled: 0 };
+  const entrantsBySource = { online: 0, unscheduled: 0 };
   const errors = [];
   const warnings = [];
   const sheetLabels = [];
@@ -516,10 +519,12 @@ function analyzeSelectedSheet() {
     const countTickets = (sourceRowsToCount) => scheduled
       ? new Set(sourceRowsToCount.map((row) => String(row[tskIndex] ?? "").trim() || row)).size
       : sourceRowsToCount.length;
-    backlogCount += countTickets(scheduled
+    backlogBySource[slot.key] = countTickets(scheduled
       ? sourceRows.filter((row) => backlogStatuses.includes(normalizeText(row[statusIndex])))
       : sourceRows);
-    entrantsCount += countTickets(sourceRows.filter((row) => isCreatedToday(row[nttCreatedIndex])));
+    entrantsBySource[slot.key] = countTickets(sourceRows.filter((row) => isCreatedToday(row[nttCreatedIndex])));
+    backlogCount += backlogBySource[slot.key];
+    entrantsCount += entrantsBySource[slot.key];
   }
 
   const hasFiles = Object.values(slots).some((slot) => slot.workbook || slot.error);
@@ -604,6 +609,8 @@ function analyzeSelectedSheet() {
     // Backlog: ONLINE + NÃO AGENDADAS, com as regras descritas em BACKLOG_EXCLUDED_CREATOR_RULE.
     backlogCount,
     entrantsCount,
+    backlogBySource,
+    entrantsBySource,
     statusCountsByState: Object.fromEntries(Object.entries(statusCountsByState).map(([group, counts]) => [
       group,
       [...counts.entries()]
@@ -925,6 +932,36 @@ function renderAnalysis(fullAnalysis) {
 
   for (const priority of ["P1", "P2", "P3", "P4", "P5"]) {
     document.getElementById(`priority-${priority.toLowerCase()}`).textContent = analysis.priorityCounts[priority].toLocaleString("pt-BR");
+  }
+
+  // Quadro "Backlog e entrantes": colunas Agendadas, Não agendadas e Total.
+  const backlogRows = document.getElementById("backlog-rows");
+  const backlogHeader = document.createElement("div");
+  backlogHeader.className = "grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--muted)]";
+  for (const [text, align] of [["", ""], ["Agend.", "text-right"], ["Não agend.", "text-right"], ["Total", "text-right"]]) {
+    const cell = document.createElement("span");
+    cell.className = `${align} min-w-[3.5rem]`;
+    cell.textContent = text;
+    backlogHeader.append(cell);
+  }
+  backlogRows.replaceChildren(backlogHeader);
+  for (const [labelText, bySource, total] of [
+    ["Backlog", analysis.backlogBySource, analysis.backlogCount],
+    ["Entrantes", analysis.entrantsBySource, analysis.entrantsCount]
+  ]) {
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 py-3 text-sm";
+    const label = document.createElement("span");
+    label.className = "text-[color:var(--ink-4)]";
+    label.textContent = labelText;
+    row.append(label);
+    for (const [value, strong] of [[bySource.online, false], [bySource.unscheduled, false], [total, true]]) {
+      const cell = document.createElement("span");
+      cell.className = `tabular min-w-[3.5rem] text-right ${strong ? "font-semibold text-[color:var(--ink)]" : "text-[color:var(--ink-3)]"}`;
+      cell.textContent = value.toLocaleString("pt-BR");
+      row.append(cell);
+    }
+    backlogRows.append(row);
   }
 
   const statusRows = document.getElementById("status-rows");
