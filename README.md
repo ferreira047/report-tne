@@ -2,7 +2,7 @@
 
 Painel para acompanhar o backlog diário de chamados de **Planta Interna – Manutenção Corretiva** da TNE. Você importa a planilha do dia e o painel mostra encerramentos, cancelamentos e pendenciamentos por bucket, grupo, estado e prioridade.
 
-O projeto também tem a **Análise Diária de Técnicos** (`index.html`), que monta a situação de cada técnico da TNE1 e TNE2 a partir da extração do TOA. As páginas usam a mesma planilha: o que é importado numa já abre na outra. No cabeçalho, os botões **Análise de técnicos**, **Report Backlog** e **Chamados repetidos** ficam lado a lado para escolher a tela; a que está aberta fica destacada.
+O projeto também tem a **Análise Diária de Técnicos** (`index.html`), que monta a situação de cada técnico da TNE1 e TNE2 a partir da extração do TOA. As páginas usam a mesma planilha: o que é importado numa já abre na outra. No cabeçalho, os botões **Análise de técnicos**, **Report Backlog**, **Chamados repetidos** e **Report Genesis** ficam lado a lado para escolher a tela; a que está aberta fica destacada.
 
 Tudo roda no navegador: a planilha não é enviada a nenhum servidor.
 
@@ -18,7 +18,7 @@ Tudo roda no navegador: a planilha não é enviada a nenhum servidor.
 
 ## Login
 
-As duas páginas exigem login (`login.html`). Só os usuários `adminTne`, `adminTmg` e `admin047` entram; a senha é combinada com a equipe e não fica escrita no projeto. O login vale para a aba do navegador; o botão de saída fica ao lado do botão de tema.
+As páginas exigem login (`login.html`). Só os usuários `adminTne`, `adminTmg` e `admin047` entram; a senha é combinada com a equipe e não fica escrita no projeto. O login vale para a aba do navegador; o botão de saída fica ao lado do botão de tema.
 
 O login também protege o cadastro dos técnicos: ele é publicado só criptografado (`app/cadastro.enc.js`, AES-256-GCM) e cada usuário abre a chave com a própria senha, no navegador. O cadastro sem criptografia fica em `privado/cadastro.js`, que **não pode ser publicado** (está no `.gitignore`).
 
@@ -81,6 +81,17 @@ Aberta pelo botão **Chamados repetidos** no cabeçalho. Tem dois campos de uplo
 - A tabela mostra TSK, provedor, status, NE ID, CM (com botão **A–Z** para ordenar pelo CM; vale também para o Excel), UF e prioridade (GI), com filtro por estado (mesma regra do resumo por estado), por status (coluna E; abre em **Não iniciado**), por planilha e **Exportar Excel** (`chamados-repetidos-TNE-AAAA-MM-DD.xlsx`, com o filtro atual e a coluna Planilha, que não aparece na tela; no formato do backlog: aba **Visão geral** com o estado e uma aba por estado).
 - Colunas, tipo e valor do critério ficam nas constantes `COLUMNS`, `TARGET_TYPE` e `REPEATED_CRITERION` no início de `app/repetidos.js`.
 
+## Report Genesis (`genesis.html`)
+
+Aberta pelo botão **Report Genesis** no cabeçalho. Substitui a planilha `Gera-Reports_online.xlsm`: em vez de colar a extração na aba `DADOS Genesis`, preencher o RESPONSAVEL e atualizar as tabelas dinâmicas, basta anexar a extração do Painel Online TNE do Genesis (`.xlsx`, `.xlsm`, `.xls` ou `.csv`).
+
+- O cabeçalho é localizado pela célula `horario` (pode estar em qualquer uma das primeiras linhas) e as colunas são lidas pelo nome: `horario`, `site`, `tecnologia`, `uf`, `anf`, `causa`, `eve_crq`, `eve_crq_link`, `status` e `regional`. Se faltar alguma, a página avisa quais. Linhas sem `horario` são ignoradas.
+- Campos calculados (antes eram as fórmulas AL:AN): **dias** desde o `horario` até agora, **aging** (`<1d`, `Entre 1d e 3d`, `Entre 3d e 5d`, `Entre 5d e 10d`, `>10d`), **tecnologia do filtro** (1º caractere + "G") e **região** pela UF.
+- **Responsável**: se o arquivo tiver a coluna `RESPONSAVEL`, ela é usada; se não, é sugerido pela causa (regras em `RESPONSIBLE_RULES` no topo de `app/genesis.js`). Entram no report EM ANALISE, IMPLANTAÇÃO, PROVEDOR e REGIONAL; vazio e TLP ficam fora. Na tabela de detalhes o responsável de cada linha pode ser trocado; a escolha fica na sessão da aba (chave `eve_crq` + `site`) e os resumos se recalculam na hora. O aviso **linhas sem responsável** tem um botão que mostra só essas linhas.
+- Tabelas (só 3G, 4G e 5G; contagem de sites): Responsável × Aging da TNE geral, TNE 1 e TNE 2, Provedores por causa × Aging e a lista de pendências de provedor (ANF, EVE/CRQ com link, site e aging). Filtros por região, UF e tecnologia valem para todas.
+- Ações: **Copiar report** (texto para o chat, no estilo do Copiar parcial), **Copiar imagem** (tabelas Responsável × Aging; baixa em PNG se o navegador não deixar copiar), **Exportar Excel** (`report-genesis-TNE-AAAA-MM-DD.xlsx`, uma aba por tabela e a aba "Dados" com as colunas calculadas) e **Limpar** (pede confirmação e descarta o arquivo e as classificações; sem limite de linhas).
+- A extração fica guardada só para esta página (`reportFilaTecTNE.genesis`), volta após o F5 e não é compartilhada com as outras telas, que usam a extração do TOA.
+
 ## Tema claro e escuro
 
 As páginas abrem no tema claro. O botão de lua/sol no cabeçalho alterna para o escuro, e a escolha fica salva no navegador e vale para as duas páginas (`app/theme.css` e `app/theme.js`).
@@ -114,11 +125,13 @@ Se o layout da planilha mudar, ajuste as constantes no início de `app/main.js` 
 login.html           Tela de login
 backlog.html         Report Backlog TNE
 repetidos.html       Chamados Repetidos TNE (planilhas ONLINE e NÃO AGENDADAS)
+genesis.html         Report Genesis TNE (Painel Online do Genesis por responsável e aging)
 index.html           Análise Diária de Técnicos TNE
 app/auth.js          Login, sessão e abertura do cadastro criptografado
 app/cadastro.enc.js  Cadastro padrão dos técnicos TNE1/TNE2, criptografado (gerado pelo script)
 app/main.js          Backlog: leitura da planilha, cálculos, gráficos, cópia da parcial e exportação
 app/repetidos.js     Chamados repetidos: leitura das duas planilhas, filtro pela coluna Critério e exportação
+app/genesis.js       Report Genesis: leitura da extração, aging, responsável, tabelas, cópia do report e exportação
 app/app.js           Análise de técnicos: extração do TOA, situações, filtros e exportações
 app/theme.css        Tokens de cor dos temas claro e escuro (compartilhados)
 app/theme.js         Alternância e preferência de tema (compartilhada)
