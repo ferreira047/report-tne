@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f6f3">
+  <title>Report Genesis TNE</title>
+  <link rel="stylesheet" href="app/theme.css?v=20261104a">
+  <script src="app/theme.js?v=20261024a"></script>
+  <script src="app/auth.js?v=20261030a" data-protegida></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="app/shared-file.js?v=20261104a"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background-color: var(--paper);
+      background-image: radial-gradient(var(--line) 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+    .panel { background: var(--panel); border: 1px solid var(--line); }
+    .drop-zone { transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
+    .drop-zone.is-dragging { background: var(--drop-active); border-color: var(--green); transform: translateY(-2px); }
+    .drop-zone[data-loaded] { border-style: solid; border-color: var(--green-line); }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .filter-button { color: var(--ink-3); transition: background-color 160ms ease, color 160ms ease; }
+    .filter-button:hover { background: var(--green-soft); }
+    .filter-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    .filter-button[aria-pressed="true"] { background: var(--green-solid); color: #fff; }
+    .tech-toggle input { accent-color: var(--green-solid); }
+    #unassigned-box { border-color: var(--warn-line); background: var(--orange-soft); color: var(--warn-ink); }
+    #unassigned-box[data-empty="true"] { border-color: var(--ok-line); background: var(--ok-bg); color: var(--ok-ink); }
+    #unassigned-button:disabled { opacity: 0.5; cursor: default; }
+    #unassigned-button[aria-pressed="true"] { background: var(--green-solid); border-color: var(--green-solid); color: #fff; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+    <header class="mb-8 flex flex-col gap-5 border-b border-[color:var(--line)] pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--green)]">
+          <span class="inline-block h-2 w-2 rounded-full bg-[color:var(--green)]"></span>
+          Operação · informativo diário
+        </div>
+        <h1 class="text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">Report Genesis TNE</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-[color:var(--muted)]">Pendências do Painel Online do Genesis por responsável e aging, no lugar da planilha Gera-Reports_online.</p>
+      </div>
+      <div class="flex flex-col gap-2 self-stretch sm:items-stretch sm:self-auto">
+        <div class="flex items-center gap-2">
+          <div class="flex flex-1 items-center gap-2 rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 text-xs font-medium text-[color:var(--muted)]">
+            <span aria-hidden="true" class="text-[color:var(--green)]">●</span>
+            Processamento local no navegador
+          </div>
+          <button id="theme-toggle" type="button" class="theme-toggle inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] text-[color:var(--ink-3)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]" aria-label="Ativar tema escuro" title="Ativar tema escuro">
+            <svg aria-hidden="true" class="icon-moon h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2A6.5 6.5 0 017.8 3.5a6.5 6.5 0 108.7 8.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <svg aria-hidden="true" class="icon-sun h-4 w-4" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v1.8M10 15.7v1.8M2.5 10h1.8M15.7 10h1.8M4.7 4.7l1.3 1.3M14 14l1.3 1.3M4.7 15.3 6 14M14 6l1.3-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button id="logout-button" type="button" class="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-sm border border-[color:var(--line)] bg-[color:var(--surface)] text-[color:var(--ink-3)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]" aria-label="Sair" title="Sair">
+            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M8 3.5H5A1.5 1.5 0 003.5 5v10A1.5 1.5 0 005 16.5h3M12.5 13.5L16 10l-3.5-3.5M16 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <nav aria-label="Páginas" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <a href="index.html" title="Abre a Análise Diária de Técnicos TNE" class="page-link">Análise de técnicos</a>
+          <a href="backlog.html" title="Abre o Report Backlog TNE" class="page-link">Report Backlog</a>
+          <a href="repetidos.html" title="Abre os Chamados Repetidos TNE" class="page-link">Chamados repetidos</a>
+          <a href="genesis.html" aria-current="page" class="page-link">Report Genesis</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section aria-labelledby="upload-title" class="panel mb-7 rounded-md p-5 sm:p-6">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 id="upload-title" class="text-lg font-semibold">Importar extração do Genesis</h2>
+            <p class="mt-1 text-sm text-[color:var(--muted)]">Anexe a extração do Painel Online TNE. O cabeçalho é encontrado pela coluna "horario", em qualquer linha. Se o arquivo tiver a coluna RESPONSAVEL, ela é usada; se não, o responsável é sugerido pela causa.</p>
+          </div>
+          <button id="clear-button" type="button" class="hidden items-center gap-2 self-start rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--ink-3)] hover:bg-[color:var(--paper)] sm:self-auto">
+            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M4 5h12M8 5V3.5h4V5m-6.5 0 .7 11h7.6l.7-11M8.5 8v5m3-5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Limpar
+          </button>
+        </div>
+
+        <input id="file-input" class="sr-only" type="file" accept=".xlsx,.xlsm,.xls,.csv" aria-label="Extração do Genesis">
+        <div id="drop-zone" role="button" tabindex="0" aria-label="Extração do Genesis: arraste para esta área ou pressione Enter para escolher um arquivo" class="drop-zone cursor-pointer rounded-sm border border-dashed border-[color:var(--line-dashed)] bg-[color:var(--drop)] px-5 py-7 text-center hover:border-[color:var(--green)] hover:bg-[color:var(--drop-hover)]">
+          <div class="mx-auto flex max-w-xl flex-col items-center">
+            <span class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 002 2h10a2 2 0 002-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <p class="text-sm font-semibold text-[color:var(--ink-2)]">Arraste a extração do Genesis aqui</p>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">ou clique para escolher · .xlsx, .xlsm, .xls e .csv</p>
+          </div>
+        </div>
+        <div id="file-meta" class="mt-3 hidden break-all text-xs text-[color:var(--muted)]"></div>
+        <div id="sheet-picker-wrap" class="mt-3 hidden max-w-md">
+          <label for="sheet-picker" class="mb-1.5 block text-xs font-semibold text-[color:var(--ink-3)]">Aba para análise</label>
+          <select id="sheet-picker" class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+        </div>
+
+        <div id="feedback" role="status" aria-live="polite" class="mt-4 hidden rounded-sm border px-4 py-3 text-sm"></div>
+      </section>
+
+      <section id="results" class="hidden">
+        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div class="min-w-0">
+            <p class="text-xs font-bold uppercase tracking-[0.1em] text-[color:var(--muted)]">Resumo da análise</p>
+            <h2 class="mt-1 text-xl font-semibold">Pendências por responsável e aging</h2>
+            <p id="analyzed-sheet" class="mt-1 break-words text-xs text-[color:var(--muted)]"></p>
+          </div>
+          <div class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+            <button id="copy-report-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="6.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M13.5 6.5V5A1.5 1.5 0 0012 3.5H5A1.5 1.5 0 003.5 5v7A1.5 1.5 0 005 13.5h1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+              Copiar report
+            </button>
+            <button id="copy-image-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="4.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9h13M8 4.5v11" stroke="currentColor" stroke-width="1.5"/></svg>
+              Copiar imagem
+            </button>
+            <button id="export-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-sm border border-[color:var(--green)] bg-[color:var(--surface)] px-4 py-2.5 text-sm font-semibold text-[color:var(--green)] transition hover:bg-[color:var(--green-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M10 3.5v9m0 0-3.5-3.5M10 12.5l3.5-3.5M4 14.5v1A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Exportar Excel
+            </button>
+          </div>
+        </div>
+
+        <section aria-label="Filtros" class="panel mb-5 flex flex-col gap-4 rounded-md p-4 sm:flex-row sm:flex-wrap sm:items-center">
+          <div role="group" aria-label="Região" class="inline-flex self-start rounded-sm border border-[color:var(--line-strong)] p-0.5 text-xs font-semibold">
+            <button type="button" data-region="" aria-pressed="true" class="filter-button rounded-sm px-3 py-1.5">Todas</button>
+            <button type="button" data-region="TNE 1" aria-pressed="false" class="filter-button rounded-sm px-3 py-1.5">TNE 1</button>
+            <button type="button" data-region="TNE 2" aria-pressed="false" class="filter-button rounded-sm px-3 py-1.5">TNE 2</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="uf-filter" class="text-xs font-semibold text-[color:var(--ink-3)]">UF</label>
+            <select id="uf-filter" class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2 text-xs text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"></select>
+          </div>
+          <fieldset class="flex flex-wrap items-center gap-3">
+            <legend class="sr-only">Tecnologia</legend>
+            <span aria-hidden="true" class="text-xs font-semibold text-[color:var(--ink-3)]">Tecnologia</span>
+            <label class="tech-toggle inline-flex items-center gap-1.5 text-sm"><input type="checkbox" data-technology="3G" checked> 3G</label>
+            <label class="tech-toggle inline-flex items-center gap-1.5 text-sm"><input type="checkbox" data-technology="4G" checked> 4G</label>
+            <label class="tech-toggle inline-flex items-center gap-1.5 text-sm"><input type="checkbox" data-technology="5G" checked> 5G</label>
+          </fieldset>
+          <p class="text-xs text-[color:var(--muted)] sm:ml-auto">O 2G fica sempre fora do report.</p>
+        </section>
+
+        <div id="summary-cards" class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"></div>
+
+        <div id="unassigned-box" data-empty="false" role="status" class="mb-7 flex flex-col gap-3 rounded-md border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p><strong id="unassigned-count" class="font-semibold">0 linha(s) sem responsável</strong> <span class="opacity-80">· não entram nas tabelas até serem classificadas na tabela de detalhes.</span></p>
+          <button id="unassigned-button" type="button" aria-pressed="false" class="shrink-0 self-start rounded-sm border border-current px-3 py-1.5 text-xs font-semibold transition sm:self-auto">Mostrar só essas</button>
+        </div>
+
+        <section class="panel mb-5 overflow-hidden rounded-md" aria-labelledby="general-title">
+          <div class="px-5 pb-3 pt-5">
+            <h3 id="general-title" class="font-semibold">Responsável × Aging · TNE geral</h3>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Contagem de sites (linhas) por responsável e faixa de dias desde o horário do evento. Sem responsável e TLP ficam fora.</p>
+          </div>
+          <div id="general-table" class="overflow-x-auto"></div>
+        </section>
+
+        <div id="regional-tables" class="mb-7 grid grid-cols-1 gap-5 xl:grid-cols-2"></div>
+
+        <section class="panel mb-7 overflow-hidden rounded-md" aria-labelledby="provider-cause-title">
+          <div class="px-5 pb-3 pt-5">
+            <h3 id="provider-cause-title" class="font-semibold">Provedores por causa × Aging</h3>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Só responsável PROVEDOR, uma linha por causa, da maior para a menor.</p>
+          </div>
+          <div id="provider-cause-table" class="overflow-x-auto"></div>
+        </section>
+
+        <section class="panel mb-7 overflow-hidden rounded-md" aria-labelledby="provider-title">
+          <div class="border-b border-[color:var(--line-2)] px-5 py-4">
+            <h3 id="provider-title" class="font-semibold">Pendências de provedor</h3>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Ordenadas por ANF e EVE/CRQ; o EVE/CRQ abre o chamado em nova aba. <span id="provider-total" class="font-medium"></span></p>
+          </div>
+          <div class="max-h-[560px] overflow-auto">
+            <table class="w-full min-w-[520px] text-left text-sm">
+              <thead class="sticky top-0 bg-[color:var(--sunken)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
+                <tr>
+                  <th scope="col" class="px-4 py-3 font-semibold">ANF</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">EVE/CRQ</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Site</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Aging</th>
+                </tr>
+              </thead>
+              <tbody id="provider-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel mb-7 overflow-hidden rounded-md" aria-labelledby="details-title">
+          <div class="border-b border-[color:var(--line-2)] px-5 py-4">
+            <h3 id="details-title" class="scroll-mt-4 font-semibold">Detalhes e responsável</h3>
+            <p class="mt-1 text-xs text-[color:var(--muted)]">Linhas dos filtros acima (sem responsável primeiro, depois as mais antigas). Mude o responsável na última coluna: os resumos se recalculam e a escolha fica guardada nesta sessão. <span id="details-total" class="font-medium"></span></p>
+          </div>
+          <div class="max-h-[720px] overflow-auto">
+            <table class="w-full min-w-[1080px] text-left text-sm">
+              <thead class="sticky top-0 z-10 bg-[color:var(--sunken)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
+                <tr>
+                  <th scope="col" class="px-4 py-3 font-semibold">Horário</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Aging</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Site</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Tec.</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">UF</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">ANF</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Causa</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">EVE/CRQ</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Responsável</th>
+                </tr>
+              </thead>
+              <tbody id="detail-rows" class="divide-y divide-[color:var(--line-soft)]"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <p class="border-t border-[color:var(--line)] pt-5 text-xs text-[color:var(--muted)]">Os arquivos permanecem no seu dispositivo; nada é enviado a um servidor.</p>
+      </section>
+    </main>
+    <footer class="pt-8 text-center text-[11px] text-[color:var(--faint)]">Report Genesis <span aria-hidden="true">·</span> leitura e processamento locais</footer>
+  </div>
+
+  <script src="app/genesis.js?v=20261118a"></script>
+</body>
+</html>
