@@ -18,7 +18,7 @@ Tudo roda no navegador: a planilha não é enviada a nenhum servidor.
 
 ## Login
 
-As páginas exigem login (`login.html`). Só os usuários `adminTne`, `adminTmg` e `admin047` entram; a senha é combinada com a equipe e não fica escrita no projeto. O login vale para a aba do navegador; o botão de saída fica ao lado do botão de tema.
+As páginas exigem login (`login.html`). Os usuários `adminTne`, `adminTmg` e `admin047` entram em todas as páginas, e o perfil Genesis só no Report Genesis (veja abaixo); a senha é combinada com a equipe e não fica escrita no projeto. O login vale para a aba do navegador; o botão de saída fica ao lado do botão de tema.
 
 O login também protege o cadastro dos técnicos: ele é publicado só criptografado (`app/cadastro.enc.js`, AES-256-GCM) e cada usuário abre a chave com a própria senha, no navegador. O cadastro sem criptografia fica em `privado/cadastro.js`, que **não pode ser publicado** (está no `.gitignore`).
 
@@ -30,6 +30,18 @@ python ferramentas/criptografar_cadastro.py
 ```
 
 O script pede a senha no terminal e regrava `app/cadastro.enc.js`.
+
+### Perfil Genesis
+
+Os usuários da lista `USUARIOS_GENESIS` (hoje `cristinalopes@tlp.com`) entram só no Report Genesis. Ao abrir outra página, eles voltam para `genesis.html`, e os links para as outras páginas somem. Eles têm senha própria e não recebem a chave do cadastro dos técnicos. A senha abre apenas uma marca de verificação que leva o perfil como dado autenticado, então trocar o perfil no arquivo faz o login falhar. As páginas que cada perfil abre ficam em `AUTH_PROFILES`, em `app/auth.js`.
+
+Para criar ou trocar a senha só dos usuários Genesis, sem mexer no cadastro nem nos admins (não precisa de `privado/cadastro.js`):
+
+```
+python ferramentas/criptografar_cadastro.py --genesis
+```
+
+Sem `--genesis`, o script pede as duas senhas (admins e Genesis) e regrava tudo.
 
 ## O que o painel mostra
 

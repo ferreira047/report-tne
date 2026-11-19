@@ -20,6 +20,12 @@ const CADASTRO_CRIPTOGRAFADO = {
       "salt": "5wCFeQlohoIya/T8Fx3veA==",
       "iv": "Gyg2t1YYpQlCyN1C",
       "chave": "guvTB3n1cqYyUYkb8KmOwMq23sc7pwy4uke9IrPLfDktPPtbaiw4pyNeT7hOTYoI"
+    },
+    "cristinalopes@tlp.com": {
+      "perfil": "genesis",
+      "salt": "XKfuGOjcXjY/5BmC1SpESg==",
+      "iv": "V52MfXcs3R2nfqKq",
+      "chave": "/2gxCvrRVL2GGK+Bm2BD1vroOEwaBqM="
     }
   },
   "iv": "R0b5SXGu9FaS5CZ3",
