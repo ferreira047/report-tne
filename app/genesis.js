@@ -837,9 +837,17 @@ async function copyGenesisReport() {
 
 // ===== Copiar imagem =====
 // Cores do tema ativo na tela: a imagem sai no mesmo tema (claro ou escuro) da página.
+// A imagem sai sempre no tema claro: lê as cores de um elemento com data-theme="light",
+// que redefine a paleta mesmo com a página no escuro.
 function readThemeColors(names) {
-  const style = getComputedStyle(document.documentElement);
-  return Object.fromEntries(names.map((name) => [name, style.getPropertyValue(`--${name}`).trim()]));
+  const probe = document.createElement("div");
+  probe.dataset.theme = "light";
+  probe.hidden = true;
+  document.body.append(probe);
+  const style = getComputedStyle(probe);
+  const colors = Object.fromEntries(names.map((name) => [name, style.getPropertyValue(`--${name}`).trim()]));
+  probe.remove();
+  return colors;
 }
 
 // Desenha as tabelas Responsável × Aging num canvas, como o "Copiar gráfico" do backlog.
