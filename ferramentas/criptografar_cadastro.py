@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # ===== CONFIGURE AQUI =====
 USUARIOS = ["adminTne", "adminTmg", "admin047"]
-USUARIOS_GENESIS = ["cristinalopes@tlp.com"]  # perfil que só acessa o Report Genesis
+USUARIOS_GENESIS = ["cristinalopes@tlp.com", "melina@tlp.com", "joaofelipe@tlp.com"]  # perfil que só acessa o Report Genesis
 ITERACOES = 600_000
 # ==========================
 

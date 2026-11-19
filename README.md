@@ -33,7 +33,7 @@ O script pede a senha no terminal e regrava `app/cadastro.enc.js`.
 
 ### Perfil Genesis
 
-Os usuários da lista `USUARIOS_GENESIS` (hoje `cristinalopes@tlp.com`) entram só no Report Genesis. Ao abrir outra página, eles voltam para `genesis.html`, e os links para as outras páginas somem. Eles têm senha própria e não recebem a chave do cadastro dos técnicos. A senha abre apenas uma marca de verificação que leva o perfil como dado autenticado, então trocar o perfil no arquivo faz o login falhar. As páginas que cada perfil abre ficam em `AUTH_PROFILES`, em `app/auth.js`.
+Os usuários da lista `USUARIOS_GENESIS` (hoje `cristinalopes@tlp.com`, `melina@tlp.com` e `joaofelipe@tlp.com`) entram só no Report Genesis. Ao abrir outra página, eles voltam para `genesis.html`, e os links para as outras páginas somem. Eles têm senha própria e não recebem a chave do cadastro dos técnicos. A senha abre apenas uma marca de verificação que leva o perfil como dado autenticado, então trocar o perfil no arquivo faz o login falhar. As páginas que cada perfil abre ficam em `AUTH_PROFILES`, em `app/auth.js`.
 
 Para criar ou trocar a senha só dos usuários Genesis, sem mexer no cadastro nem nos admins (não precisa de `privado/cadastro.js`):
 

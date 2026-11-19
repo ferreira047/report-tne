@@ -23,9 +23,21 @@ const CADASTRO_CRIPTOGRAFADO = {
     },
     "cristinalopes@tlp.com": {
       "perfil": "genesis",
-      "salt": "XKfuGOjcXjY/5BmC1SpESg==",
-      "iv": "V52MfXcs3R2nfqKq",
-      "chave": "/2gxCvrRVL2GGK+Bm2BD1vroOEwaBqM="
+      "salt": "oeIuTEFX1pM0nO3ZSPMCDA==",
+      "iv": "GYjrwGn1r9X9V8od",
+      "chave": "Ztg2K6sipBpIQ294+y/Mx5xh+KWCsWE="
+    },
+    "melina@tlp.com": {
+      "perfil": "genesis",
+      "salt": "dc9hPoTzzVhOUDRHLjCCag==",
+      "iv": "bsUCeff6Qdwx23yj",
+      "chave": "Lka+7Xh962jciOLQj/bDHLdqcLg7sd8="
+    },
+    "joaofelipe@tlp.com": {
+      "perfil": "genesis",
+      "salt": "NjGaWdDqshBhzDWhiaZEjQ==",
+      "iv": "Ap5v6t0YGqBpYzhA",
+      "chave": "DLzs+ym6TWMJnpANXYhcKrAhoOJWVRE="
     }
   },
   "iv": "R0b5SXGu9FaS5CZ3",
