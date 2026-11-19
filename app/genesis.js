@@ -520,26 +520,51 @@ function renderPivotTable(container, pivot, firstColumnLabel, emptyMessage) {
   container.replaceChildren(table);
 }
 
+// Cada card mostra o total e, embaixo, a divisão TNE 1 / TNE 2 (some quando a região está filtrada).
 function renderCards(view) {
+  const showSplit = view.regional.length > 1;
+  // pick: da tabela dinâmica (geral ou de uma região), o número do card.
+  const card = (label, pick, note, tone) => ({
+    label,
+    value: pick(view.general),
+    note,
+    tone,
+    split: showSplit ? view.regional.map(({ region, pivot }) => ({ region, value: pick(pivot) })) : []
+  });
+  const responsibleCount = (responsible) => (pivot) => pivot.rows.find(([label]) => label === responsible)?.[1].total || 0;
   const cards = [
-    { label: "Total no report", value: view.general.total.total, note: `Sites dos ${REPORT_RESPONSIBLES.length} responsáveis`, tone: "var(--blue)" },
-    ...view.general.rows.map(([responsible, counts]) => ({
-      label: responsible,
-      value: counts.total,
-      note: `${view.general.total.total ? Math.round((counts.total / view.general.total.total) * 100) : 0}% do report`,
-      tone: responsible === PROVIDER_RESPONSIBLE ? "var(--green)" : "var(--line-strong)"
-    })),
-    { label: "Acima de 10 dias", value: view.general.total.aging[OVER_10_DAYS], note: "Faixa >10d", tone: "var(--red)" }
+    card("Total no report", (pivot) => pivot.total.total, `Sites dos ${REPORT_RESPONSIBLES.length} responsáveis`, "var(--blue)"),
+    ...view.general.rows.map(([responsible, counts]) => card(
+      responsible,
+      responsibleCount(responsible),
+      `${view.general.total.total ? Math.round((counts.total / view.general.total.total) * 100) : 0}% do report`,
+      responsible === PROVIDER_RESPONSIBLE ? "var(--green)" : "var(--line-strong)"
+    )),
+    card("Acima de 10 dias", (pivot) => pivot.total.aging[OVER_10_DAYS], "Faixa >10d", "var(--red)")
   ];
-  document.getElementById("summary-cards").replaceChildren(...cards.map(({ label, value, note, tone }) => {
+  document.getElementById("summary-cards").replaceChildren(...cards.map(({ label, value, note, tone, split }) => {
     const article = document.createElement("article");
-    article.className = "panel rounded-md border-l-4 p-4";
+    article.className = "panel flex flex-col rounded-md border-l-4 p-4";
     article.style.borderLeftColor = tone;
     article.append(
       cell("p", label, "text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]"),
       cell("p", formatCount(value), "tabular mt-2 text-2xl font-semibold tracking-tight"),
       cell("p", note, "mt-1 text-xs text-[color:var(--muted)]")
     );
+    if (split.length) {
+      const list = document.createElement("dl");
+      list.className = "mt-3 grid grid-cols-2 gap-2 border-t border-[color:var(--line-soft)] pt-2.5 text-xs";
+      for (const { region, value: regionValue } of split) {
+        const item = document.createElement("div");
+        item.append(
+          cell("dt", region, "text-[11px] text-[color:var(--muted)]"),
+          cell("dd", formatCount(regionValue), "tabular text-sm font-semibold text-[color:var(--ink-2)]")
+        );
+        list.append(item);
+      }
+      // O espaçador empurra a divisão para o pé do card: fica alinhada entre cards de alturas diferentes.
+      article.append(cell("div", "", "flex-1"), list);
+    }
     return article;
   }));
 }
