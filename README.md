@@ -18,7 +18,7 @@ Tudo roda no navegador: a planilha não é enviada a nenhum servidor.
 
 ## Login
 
-As páginas exigem login (`login.html`). Os usuários `adminTne`, `adminTmg` e `admin047` entram em todas as páginas, e o perfil Genesis só no Report Genesis (veja abaixo); a senha é combinada com a equipe e não fica escrita no projeto. O login vale para a aba do navegador; o botão de saída fica ao lado do botão de tema.
+As páginas exigem login (`login.html`). Os usuários `adminTne`, `adminTmg` e `admin047` entram em todas as páginas, assim como os admins com senha própria (`ADMINS_EXTRA`: `brunoserpa1@tlp.com` e `ralph1@tlp.com`). O perfil Genesis entra só no Report Genesis (veja abaixo); a senha é combinada com a equipe e não fica escrita no projeto. O login vale para a aba do navegador; o botão de saída fica ao lado do botão de tema.
 
 O login também protege o cadastro dos técnicos: ele é publicado só criptografado (`app/cadastro.enc.js`, AES-256-GCM) e cada usuário abre a chave com a própria senha, no navegador. O cadastro sem criptografia fica em `privado/cadastro.js`, que **não pode ser publicado** (está no `.gitignore`).
 
@@ -31,9 +31,17 @@ python ferramentas/criptografar_cadastro.py
 
 O script pede a senha no terminal e regrava `app/cadastro.enc.js`.
 
+### Admins com senha própria
+
+Os usuários da lista `ADMINS_EXTRA` têm o mesmo acesso dos admins, mas outra senha. Para gravar ou trocar só esses usuários (pede a senha atual dos admins, para abrir a chave do cadastro, e depois a senha deles):
+
+```
+python ferramentas/criptografar_cadastro.py --admins-extra
+```
+
 ### Perfil Genesis
 
-Os usuários da lista `USUARIOS_GENESIS` (hoje `brunoserpa1@tlp.com` e `ralph1@tlp.com`) entram só no Report Genesis. Ao abrir outra página, eles voltam para `genesis.html`, e os links para as outras páginas somem. Eles têm senha própria e não recebem a chave do cadastro dos técnicos. A senha abre apenas uma marca de verificação que leva o perfil como dado autenticado, então trocar o perfil no arquivo faz o login falhar. As páginas que cada perfil abre ficam em `AUTH_PROFILES`, em `app/auth.js`.
+Os usuários da lista `USUARIOS_GENESIS` (hoje nenhum) entram só no Report Genesis. Ao abrir outra página, eles voltam para `genesis.html`, e os links para as outras páginas somem. Eles têm senha própria e não recebem a chave do cadastro dos técnicos. A senha abre apenas uma marca de verificação que leva o perfil como dado autenticado, então trocar o perfil no arquivo faz o login falhar. As páginas que cada perfil abre ficam em `AUTH_PROFILES`, em `app/auth.js`.
 
 Para criar ou trocar a senha só dos usuários Genesis, sem mexer no cadastro nem nos admins (não precisa de `privado/cadastro.js`):
 
@@ -42,6 +50,16 @@ python ferramentas/criptografar_cadastro.py --genesis
 ```
 
 Sem `--genesis`, o script pede as duas senhas (admins e Genesis) e regrava tudo.
+
+## Publicação (Cloudflare Pages + Access)
+
+O repositório no GitHub é **privado**, e o site é publicado pelo Cloudflare Pages. O Cloudflare Access fica na frente: só os e-mails liberados na política de acesso recebem um código por e-mail e conseguem baixar as páginas. Quem não está na lista não acessa nenhum arquivo.
+
+- Cloudflare Pages, projeto ligado ao repositório `tne` (branch `main`): sem build command (ou `exit 0`) e saída na raiz (`/`). Cada push na `main` publica sozinho.
+- Cloudflare Zero Trust → Access → Applications: aplicação *self-hosted* para o domínio `.pages.dev` do projeto e para `*.<projeto>.pages.dev` (as prévias), com uma política *Allow* que inclui os e-mails autorizados.
+- O login do próprio site (admins e perfil Genesis) continua valendo depois do Access.
+
+Para liberar ou tirar alguém, mude a lista de e-mails na política do Access. Para o perfil Genesis, mude também `USUARIOS_GENESIS` (veja **Login**).
 
 ## O que o painel mostra
 

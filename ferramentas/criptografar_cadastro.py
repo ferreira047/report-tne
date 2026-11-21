@@ -10,12 +10,18 @@ Usuários do perfil Genesis (USUARIOS_GENESIS) só entram no Report Genesis
 (genesis.html) e não recebem a chave do cadastro: a senha deles abre apenas uma
 marca de verificação.
 
+Admins com senha própria (ADMINS_EXTRA) têm o mesmo acesso dos admins de
+USUARIOS, mas outra senha.
+
 Uso (na pasta do projeto):
   pip install cryptography
-  python ferramentas/criptografar_cadastro.py            # tudo (precisa de privado/cadastro.js)
-  python ferramentas/criptografar_cadastro.py --genesis  # só os usuários Genesis
-As senhas são pedidas no terminal (ou lidas de REPORT_SENHA e REPORT_SENHA_GENESIS).
-Com --genesis o cadastro e os admins de app/cadastro.enc.js ficam como estão.
+  python ferramentas/criptografar_cadastro.py                 # tudo (precisa de privado/cadastro.js)
+  python ferramentas/criptografar_cadastro.py --genesis       # só os usuários Genesis
+  python ferramentas/criptografar_cadastro.py --admins-extra  # só os ADMINS_EXTRA
+As senhas são pedidas no terminal (ou lidas de REPORT_SENHA, REPORT_SENHA_GENESIS
+e REPORT_SENHA_EXTRA). Com --genesis ou --admins-extra o cadastro e os demais
+usuários de app/cadastro.enc.js ficam como estão; --admins-extra pede a senha
+atual dos admins para abrir a chave do cadastro.
 Rode de novo sempre que mudar o cadastro, os usuários ou a senha.
 """
 
@@ -33,7 +39,8 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # ===== CONFIGURE AQUI =====
 USUARIOS = ["adminTne", "adminTmg", "admin047"]
-USUARIOS_GENESIS = ["brunoserpa1@tlp.com", "ralph1@tlp.com"]  # perfil que só acessa o Report Genesis
+ADMINS_EXTRA = ["brunoserpa1@tlp.com", "ralph1@tlp.com"]  # mesmo acesso dos admins, senha própria
+USUARIOS_GENESIS = []  # perfil que só acessa o Report Genesis
 ITERACOES = 600_000
 # ==========================
 
@@ -94,6 +101,45 @@ def ler_pacote_atual() -> dict:
     return json.loads(texto[texto.index("{"):texto.rindex("}") + 1])
 
 
+def entrada_admin(usuario: str, senha: str, chave_dados: bytes, extra: bool = False) -> dict:
+    # O nome do usuário entra como dado autenticado: a chave de um não serve para outro
+    salt, iv = os.urandom(16), os.urandom(12)
+    chave = AESGCM(chave_da_senha(senha, salt)).encrypt(iv, chave_dados, usuario.lower().encode())
+    entrada = {"salt": _b64(salt), "iv": _b64(iv), "chave": _b64(chave)}
+    if extra:
+        entrada["grupo"] = "admin-extra"  # só marca a origem; o site trata como admin
+    return entrada
+
+
+def abrir_chave_dados(pacote: dict, senha: str) -> bytes:
+    for usuario in USUARIOS:
+        entrada = pacote["usuarios"].get(usuario.lower())
+        if not entrada or entrada.get("perfil"):
+            continue
+        try:
+            chave = chave_da_senha(senha, base64.b64decode(entrada["salt"]))
+            return AESGCM(chave).decrypt(base64.b64decode(entrada["iv"]), base64.b64decode(entrada["chave"]),
+                                         usuario.lower().encode())
+        except Exception:
+            continue
+    raise SystemExit("Senha dos admins não confere com app/cadastro.enc.js.")
+
+
+def so_admins_extra() -> None:
+    pacote = ler_pacote_atual()
+    chave_dados = abrir_chave_dados(pacote, pedir_senha("REPORT_SENHA", "Senha atual dos admins: "))
+    senha = pedir_senha("REPORT_SENHA_EXTRA", "Senha dos ADMINS_EXTRA: ")
+    novos = {usuario.lower() for usuario in ADMINS_EXTRA}
+    # Tira admins extra antigos e qualquer entrada antiga desses nomes (ex.: perfil Genesis).
+    usuarios = {nome: entrada for nome, entrada in pacote["usuarios"].items()
+                if entrada.get("grupo") != "admin-extra" and nome not in novos}
+    for usuario in ADMINS_EXTRA:
+        usuarios[usuario.lower()] = entrada_admin(usuario, senha, chave_dados, extra=True)
+    pacote["usuarios"] = usuarios
+    gravar(pacote)
+    print(f"{len(ADMINS_EXTRA)} admin(s) extra gravado(s) em {DESTINO}")
+
+
 def so_genesis() -> None:
     pacote = ler_pacote_atual()
     senha = pedir_senha("REPORT_SENHA_GENESIS", "Senha do perfil Genesis: ")
@@ -109,8 +155,12 @@ def main() -> None:
     if "--genesis" in sys.argv[1:]:
         so_genesis()
         return
+    if "--admins-extra" in sys.argv[1:]:
+        so_admins_extra()
+        return
     linhas = ler_cadastro()
     senha = pedir_senha("REPORT_SENHA", "Senha dos usuários: ")
+    senha_extra = pedir_senha("REPORT_SENHA_EXTRA", "Senha dos ADMINS_EXTRA: ") if ADMINS_EXTRA else ""
     senha_genesis = pedir_senha("REPORT_SENHA_GENESIS", "Senha do perfil Genesis: ") if USUARIOS_GENESIS else ""
 
     chave_dados = AESGCM.generate_key(bit_length=256)
@@ -119,12 +169,9 @@ def main() -> None:
         iv_dados, json.dumps(linhas, ensure_ascii=False).encode("utf-8"), None
     )
 
-    usuarios = {}
-    for usuario in USUARIOS:
-        salt, iv = os.urandom(16), os.urandom(12)
-        # O nome do usuário entra como dado autenticado: a chave de um não serve para outro
-        chave = AESGCM(chave_da_senha(senha, salt)).encrypt(iv, chave_dados, usuario.lower().encode())
-        usuarios[usuario.lower()] = {"salt": _b64(salt), "iv": _b64(iv), "chave": _b64(chave)}
+    usuarios = {usuario.lower(): entrada_admin(usuario, senha, chave_dados) for usuario in USUARIOS}
+    for usuario in ADMINS_EXTRA:
+        usuarios[usuario.lower()] = entrada_admin(usuario, senha_extra, chave_dados, extra=True)
     if USUARIOS_GENESIS:
         usuarios.update(entradas_genesis(senha_genesis))
 
@@ -132,7 +179,7 @@ def main() -> None:
               "iv": _b64(iv_dados), "dados": _b64(dados)}
     gravar(pacote)
     print(f"{len(linhas)} técnicos criptografados para {len(USUARIOS)} usuários "
-          f"(+{len(USUARIOS_GENESIS)} Genesis) em {DESTINO}")
+          f"(+{len(ADMINS_EXTRA)} admins extra, +{len(USUARIOS_GENESIS)} Genesis) em {DESTINO}")
 
 
 if __name__ == "__main__":
