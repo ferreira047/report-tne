@@ -22,16 +22,16 @@ const CADASTRO_CRIPTOGRAFADO = {
       "chave": "guvTB3n1cqYyUYkb8KmOwMq23sc7pwy4uke9IrPLfDktPPtbaiw4pyNeT7hOTYoI"
     },
     "brunoserpa1@tlp.com": {
-      "perfil": "genesis",
-      "salt": "RbCrJsTahzt7myNNIE6oqA==",
-      "iv": "dNLwkftlZWbP7Pde",
-      "chave": "v02co12Nto3KQtuswIsN1T5OoyTUk0A="
+      "salt": "d/wIYHd2p2FOs1CM3EFbew==",
+      "iv": "yKcPvq02C8b9zbw8",
+      "chave": "s6fpbizk7FXjGhdT3Os/durerpCml/ZrypzqL90eqrev8/4I7UPAsS7dtu3g66h5",
+      "grupo": "admin-extra"
     },
     "ralph1@tlp.com": {
-      "perfil": "genesis",
-      "salt": "JS5Z4V/7OKBHiQibVvdJ5A==",
-      "iv": "edzjyKgPkJutFcYD",
-      "chave": "5k8OlWhSdkpnis1cB4/JpUwW1wG3fEI="
+      "salt": "x0v+vxvr0UzXN+Cm+si5yw==",
+      "iv": "FOThaVYyQMI1sP3e",
+      "chave": "421BhvCqUrqXLRn8/t3VWlsAv5FzZwFMcMFvjywbCO/Jy6Sfqi8axwnnFATqYJHS",
+      "grupo": "admin-extra"
     }
   },
   "iv": "R0b5SXGu9FaS5CZ3",
