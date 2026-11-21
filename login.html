@@ -43,10 +43,16 @@
           Usuário
           <input id="login-user" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
         </label>
-        <label class="flex flex-col gap-1.5 text-xs font-medium text-[color:var(--ink-3)]">
-          Senha
-          <input id="login-password" name="password" type="password" autocomplete="current-password" required class="rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] px-3 py-2.5 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
-        </label>
+        <div class="flex flex-col gap-1.5 text-xs font-medium text-[color:var(--ink-3)]">
+          <label for="login-password">Senha</label>
+          <div class="relative">
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full rounded-sm border border-[color:var(--line-strong)] bg-[color:var(--surface)] py-2.5 pl-3 pr-11 text-sm text-[color:var(--ink)] focus:border-[color:var(--green)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]">
+            <button id="toggle-password" type="button" aria-controls="login-password" aria-pressed="false" aria-label="Mostrar senha" title="Mostrar senha" class="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center rounded-r-sm text-[color:var(--muted)] transition hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--green)]">
+              <svg aria-hidden="true" class="icon-eye h-[18px] w-[18px]" viewBox="0 0 20 20" fill="none"><path d="M1.8 10S4.8 4.5 10 4.5 18.2 10 18.2 10 15.2 15.5 10 15.5 1.8 10 1.8 10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.5"/></svg>
+              <svg aria-hidden="true" class="icon-eye-off hidden h-[18px] w-[18px]" viewBox="0 0 20 20" fill="none"><path d="M8.1 4.7A7.9 7.9 0 0110 4.5c5.2 0 8.2 5.5 8.2 5.5a14 14 0 01-2.2 2.9M5.4 6.1A13.6 13.6 0 001.8 10S4.8 15.5 10 15.5a7.6 7.6 0 004.1-1.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.2 8.3a2.6 2.6 0 003.5 3.5M3 3l14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
         <p id="login-error" role="alert" class="hidden rounded-sm border border-[color:var(--error-line)] bg-[color:var(--error-bg)] px-3 py-2 text-sm text-[color:var(--error-ink)]"></p>
         <button id="login-submit" type="submit" class="mt-1 inline-flex items-center justify-center rounded-sm bg-[color:var(--green-solid)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--green-solid-hover)] disabled:cursor-wait disabled:opacity-70">Entrar</button>
       </form>
@@ -71,6 +77,22 @@
       const error = document.getElementById('login-error');
       const submit = document.getElementById('login-submit');
 
+      // Olho ao lado da senha: alterna entre mostrar e esconder o texto digitado.
+      const toggle = document.getElementById('toggle-password');
+      function setPasswordVisible(visible) {
+        password.type = visible ? 'text' : 'password';
+        const label = visible ? 'Ocultar senha' : 'Mostrar senha';
+        toggle.setAttribute('aria-pressed', String(visible));
+        toggle.setAttribute('aria-label', label);
+        toggle.title = label;
+        toggle.querySelector('.icon-eye').classList.toggle('hidden', visible);
+        toggle.querySelector('.icon-eye-off').classList.toggle('hidden', !visible);
+      }
+      toggle.addEventListener('click', () => {
+        setPasswordVisible(password.type === 'password');
+        password.focus();
+      });
+
       function showError(message) {
         error.textContent = message;
         error.classList.remove('hidden');
@@ -84,6 +106,7 @@
           showError('Informe usuário e senha.');
           return;
         }
+        setPasswordVisible(false);
         submit.disabled = true;
         submit.textContent = 'Entrando…';
         try {
