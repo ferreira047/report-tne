@@ -21,23 +21,17 @@ const CADASTRO_CRIPTOGRAFADO = {
       "iv": "Gyg2t1YYpQlCyN1C",
       "chave": "guvTB3n1cqYyUYkb8KmOwMq23sc7pwy4uke9IrPLfDktPPtbaiw4pyNeT7hOTYoI"
     },
-    "cristinalopes@tlp.com": {
+    "brunoserpa1@tlp.com": {
       "perfil": "genesis",
-      "salt": "oeIuTEFX1pM0nO3ZSPMCDA==",
-      "iv": "GYjrwGn1r9X9V8od",
-      "chave": "Ztg2K6sipBpIQ294+y/Mx5xh+KWCsWE="
+      "salt": "RbCrJsTahzt7myNNIE6oqA==",
+      "iv": "dNLwkftlZWbP7Pde",
+      "chave": "v02co12Nto3KQtuswIsN1T5OoyTUk0A="
     },
-    "melina@tlp.com": {
+    "ralph1@tlp.com": {
       "perfil": "genesis",
-      "salt": "dc9hPoTzzVhOUDRHLjCCag==",
-      "iv": "bsUCeff6Qdwx23yj",
-      "chave": "Lka+7Xh962jciOLQj/bDHLdqcLg7sd8="
-    },
-    "joaofelipe@tlp.com": {
-      "perfil": "genesis",
-      "salt": "NjGaWdDqshBhzDWhiaZEjQ==",
-      "iv": "Ap5v6t0YGqBpYzhA",
-      "chave": "DLzs+ym6TWMJnpANXYhcKrAhoOJWVRE="
+      "salt": "JS5Z4V/7OKBHiQibVvdJ5A==",
+      "iv": "edzjyKgPkJutFcYD",
+      "chave": "5k8OlWhSdkpnis1cB4/JpUwW1wG3fEI="
     }
   },
   "iv": "R0b5SXGu9FaS5CZ3",
